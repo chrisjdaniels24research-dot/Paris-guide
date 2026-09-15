@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paris — a working list</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --paper:#F4F1E9; --paper-2:#FAF8F2; --card:#FFFFFF;
+  --ink:#1A241F; --ink-soft:#586460; --rule:#E1DDD1; --rule-2:#EDEAE0;
+  --green:#14493F; --green-2:#0F3A32; --green-tint:#E4EDE7;
+  --burgundy:#7B2D3A; --burgundy-tint:#F2E4E4;
+  --brass:#9C7E3A;
+  --shadow:0 1px 2px rgba(26,36,31,.05),0 10px 26px -18px rgba(26,36,31,.28);
+  --nav-h:60px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#111613; --paper-2:#161D19; --card:#19211D;
+  --ink:#E9E7DC; --ink-soft:#9EA8A1; --rule:#28312C; --rule-2:#212a25;
+  --green:#4E9277; --green-2:#3F7D65; --green-tint:#17251F;
+  --burgundy:#CE7180; --burgundy-tint:#241315;
+  --brass:#C4A45A;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -20px rgba(0,0,0,.8);
+}}
+:root[data-theme="dark"]{
+  --paper:#111613; --paper-2:#161D19; --card:#19211D;
+  --ink:#E9E7DC; --ink-soft:#9EA8A1; --rule:#28312C; --rule-2:#212a25;
+  --green:#4E9277; --green-2:#3F7D65; --green-tint:#17251F;
+  --burgundy:#CE7180; --burgundy-tint:#241315;
+  --brass:#C4A45A;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -20px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,sans-serif;
+  font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
+}
+h1,h2,h3,.serif{font-family:"Fraunces","Georgia",serif;font-weight:500}
+a{color:inherit}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+img{max-width:100%}
+
+.wrap{max-width:760px;margin:0 auto;padding-inline:18px}
+
+/* ---------- app header ---------- */
+.appbar{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:30;
+  background:color-mix(in srgb,var(--paper) 90%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--rule-2);
+}
+.appbar .row{display:flex;align-items:center;gap:12px;max-width:760px;margin:0 auto;padding:10px 18px}
+.appbar .mark{font-family:"Fraunces",serif;font-weight:600;font-size:20px;letter-spacing:-.01em;flex:0 0 auto}
+.appbar .mark small{font-family:"Archivo",sans-serif;font-weight:500;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);display:block;line-height:1;margin-top:2px}
+.appbar .sp{flex:1}
+.iconbtn{
+  width:40px;height:40px;border-radius:11px;border:1px solid var(--rule);background:var(--card);
+  display:grid;place-items:center;color:var(--ink);font-size:17px;flex:0 0 auto;
+}
+.iconbtn:hover{border-color:var(--green)}
+
+/* ---------- views ---------- */
+.view{display:none}
+.view.active{display:block}
+.pad{padding-block:22px}
+
+/* ---------- hero ---------- */
+.hero h1{font-size:clamp(40px,11vw,68px);line-height:.92;letter-spacing:-.03em;margin:6px 0 0}
+.hero p.tag{color:var(--ink-soft);font-size:17px;margin:10px 0 0;max-width:46ch;font-style:italic;font-family:"Fraunces",serif}
+
+/* ---------- search ---------- */
+.search{position:relative;margin:20px 0 4px}
+.search input{
+  width:100%;font-size:16px;font-family:inherit;color:var(--ink);
+  background:var(--card);border:1px solid var(--rule);border-radius:13px;
+  padding:13px 15px 13px 42px;
+}
+.search input::placeholder{color:var(--ink-soft)}
+.search .mag{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);font-size:16px;pointer-events:none}
+.search .clr{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--ink-soft);font-size:20px;width:32px;height:32px;border-radius:8px;display:none}
+.search .clr.show{display:block}
+
+/* ---------- chips ---------- */
+.chiprow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:14px 0 4px;margin:0 -18px;padding-inline:18px}
+.chiprow::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto;border:1px solid var(--rule);background:var(--card);color:var(--ink-soft);
+  border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;letter-spacing:.01em;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:6px;transition:.15s;
+}
+.chip:hover{border-color:var(--green);color:var(--ink)}
+.chip[aria-pressed="true"],.chip.on{background:var(--green);border-color:var(--green);color:#fff}
+:root[data-theme="dark"] .chip[aria-pressed="true"],
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip[aria-pressed="true"]{color:#0c1512}}
+.chip .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+
+.sectlabel{font-family:"Archivo",sans-serif;font-size:12px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--green);margin:28px 0 12px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sectlabel{color:var(--green-2)}}
+:root[data-theme="dark"] .sectlabel{color:var(--green-2)}
+.results-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:22px 0 6px}
+.results-head .count{font-family:"Fraunces",serif;font-size:22px}
+.linkbtn{border:none;background:transparent;color:var(--green);font-weight:600;font-size:14px;padding:6px 2px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .linkbtn{color:var(--green-2)}}
+:root[data-theme="dark"] .linkbtn{color:var(--green-2)}
+
+/* ---------- category rows ---------- */
+.catlist{display:flex;flex-direction:column;gap:10px}
+.catrow{
+  display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:15px 16px;color:var(--ink);
+  box-shadow:var(--shadow);transition:.15s;
+}
+.catrow:hover{border-color:var(--green);transform:translateY(-1px)}
+.catrow .emo{font-size:22px;width:30px;text-align:center;flex:0 0 auto}
+.catrow .nm{font-family:"Fraunces",serif;font-size:18px;font-weight:500;flex:1}
+.catrow .ct{color:var(--ink-soft);font-size:13px;font-weight:600}
+.catrow .arr{color:var(--ink-soft);font-size:18px;margin-left:4px}
+
+.hoodwrap{display:flex;flex-wrap:wrap;gap:8px}
+.hoodchip{border:1px solid var(--rule);background:var(--card);border-radius:11px;padding:9px 13px;font-size:14px;font-weight:600;color:var(--ink)}
+.hoodchip:hover{border-color:var(--green)}
+
+.bigbtn{
+  display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+  background:var(--green);color:#fff;border:none;border-radius:14px;padding:15px;
+  font-size:15px;font-weight:700;letter-spacing:.01em;box-shadow:var(--shadow);
+}
+:root[data-theme="dark"] .bigbtn,
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bigbtn{color:#0c1512}}
+.bigbtn:hover{background:var(--green-2)}
+
+/* ---------- place cards ---------- */
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:15px;padding:15px 16px 14px;box-shadow:var(--shadow)}
+.card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.card h3{font-size:19px;line-height:1.15;margin:0;letter-spacing:-.01em}
+.card h3 a{text-decoration:none;color:var(--ink);border-bottom:1.5px solid var(--green);padding-bottom:1px}
+.card h3 a:hover{color:var(--green)}
+.card .meta{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin:4px 0 0;letter-spacing:.01em}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.t{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;line-height:1.35;white-space:nowrap}
+.t.s-highly{background:var(--burgundy);color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .t.s-highly{color:#1a0c0e}}
+:root[data-theme="dark"] .t.s-highly{color:#1a0c0e}
+.t.s-recommended{background:var(--green-tint);color:var(--green)}
+.t.s-want{background:transparent;color:var(--ink-soft);border:1px dashed var(--rule)}
+.t.s-unresolved{background:transparent;color:var(--brass);border:1px dashed var(--brass)}
+.t.book{background:transparent;color:var(--green);border:1px solid var(--green)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .t.book{color:var(--green-2);border-color:var(--green-2)}}
+:root[data-theme="dark"] .t.book{color:var(--green-2);border-color:var(--green-2)}
+.t.ctx{background:var(--paper-2);color:var(--ink-soft);border:1px solid var(--rule-2)}
+.card p.note{margin:11px 0 0;color:var(--ink-soft);font-size:15px;line-height:1.5}
+.card .actions{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0 0}
+.act{
+  display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+  border:1px solid var(--rule);border-radius:10px;padding:8px 13px;font-size:13px;font-weight:600;color:var(--ink);
+  background:var(--paper-2);min-height:40px;
+}
+.act:hover{border-color:var(--green);color:var(--green)}
+.act.primary{background:var(--green);color:#fff;border-color:var(--green)}
+:root[data-theme="dark"] .act.primary,
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .act.primary{color:#0c1512}}
+.empty{color:var(--ink-soft);text-align:center;padding:40px 10px;font-family:"Fraunces",serif;font-size:18px}
+
+/* ---------- detail overlay ---------- */
+#overlay{position:fixed;inset:0;z-index:40;background:var(--paper);overflow-y:auto;display:none;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px))}
+#overlay.show{display:block}
+.detailbar{position:sticky;top:0;z-index:2;background:color-mix(in srgb,var(--paper) 92%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--rule-2)}
+.detailbar .row{display:flex;align-items:center;gap:12px;max-width:760px;margin:0 auto;padding:10px 18px}
+.backbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:var(--card);border-radius:10px;padding:8px 12px;font-weight:600;font-size:14px;color:var(--ink)}
+.backbtn:hover{border-color:var(--green)}
+.detail-h{font-size:clamp(28px,8vw,42px);line-height:1;letter-spacing:-.02em;margin:14px 0 4px}
+.detail-sub{color:var(--ink-soft);font-size:15px;margin:0 0 6px}
+.grouplabel{font-family:"Archivo",sans-serif;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin:26px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .grouplabel{color:var(--green-2)}}
+:root[data-theme="dark"] .grouplabel{color:var(--green-2)}
+
+/* ---------- map ---------- */
+#view-map{position:fixed;inset:0;top:calc(env(safe-area-inset-top,0px));bottom:0;display:none;flex-direction:column;z-index:20}
+#view-map.active{display:flex}
+.mapbar{background:var(--paper);border-bottom:1px solid var(--rule-2);padding:8px 0 2px}
+.mapbar .row{display:flex;align-items:center;gap:10px;padding:2px 14px}
+.mapbar .ttl{font-family:"Fraunces",serif;font-weight:600;font-size:17px}
+#map{flex:1;width:100%;background:var(--paper-2)}
+.leaflet-container{font-family:"Archivo",sans-serif;background:var(--paper-2)}
+.route-pin{background:var(--burgundy);color:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-weight:700;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,.4);border:2px solid #fff}
+.routebanner{display:none;align-items:center;gap:10px;background:var(--green-tint);border-bottom:1px solid var(--rule);padding:8px 14px;font-size:13px;font-weight:600;color:var(--green)}
+.routebanner.show{display:flex}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .routebanner{color:var(--green-2)}}
+:root[data-theme="dark"] .routebanner{color:var(--green-2)}
+
+/* map bottom sheet */
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:1200;background:var(--card);
+  border-top-left-radius:18px;border-top-right-radius:18px;box-shadow:0 -8px 30px -12px rgba(0,0,0,.4);
+  padding:16px 18px calc(18px + env(safe-area-inset-bottom,0px));transform:translateY(110%);transition:transform .22s ease;
+  border-top:1px solid var(--rule)}
+#sheet.show{transform:translateY(0)}
+#sheet .sclose{position:absolute;top:12px;right:14px;border:none;background:transparent;font-size:22px;color:var(--ink-soft);width:34px;height:34px;border-radius:8px}
+#sheet h3{font-size:21px;margin:0 8px 0 0;letter-spacing:-.01em}
+#sheet .meta{font-size:13px;color:var(--ink-soft);font-weight:600;margin:4px 0 0}
+#sheet p{font-size:14.5px;color:var(--ink-soft);margin:10px 0 0;line-height:1.45}
+#sheet .actions{display:flex;gap:8px;margin:14px 0 2px}
+
+/* ---------- days ---------- */
+.day{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:18px 18px 16px;box-shadow:var(--shadow);margin-bottom:14px}
+.day h3{font-size:22px;margin:0 0 2px;letter-spacing:-.01em}
+.day .cond{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 12px}
+.day .cond.sun{color:var(--brass)} .day .cond.any{color:var(--ink-soft)}
+.day ol{margin:0;padding-left:0;list-style:none;counter-reset:step}
+.day ol li{position:relative;padding:6px 0 6px 34px;counter-increment:step;font-size:15.5px;color:var(--ink-soft);line-height:1.4}
+.day ol li::before{content:counter(step);position:absolute;left:0;top:6px;width:24px;height:24px;border-radius:50%;
+  background:var(--green-tint);color:var(--green);font-family:"Archivo";font-weight:700;font-size:12px;display:grid;place-items:center}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .day ol li::before{color:var(--green-2)}}
+:root[data-theme="dark"] .day ol li::before{color:var(--green-2)}
+.day .route{margin-top:14px}
+
+/* ---------- accordion / more ---------- */
+.acc{border:1px solid var(--rule);border-radius:14px;overflow:hidden;background:var(--card);margin-bottom:10px}
+.acc>summary{list-style:none;cursor:pointer;padding:15px 16px;font-family:"Fraunces",serif;font-size:18px;font-weight:500;
+  display:flex;justify-content:space-between;align-items:center;gap:10px}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .plus{color:var(--green);font-size:20px;transition:transform .2s}
+.acc[open]>summary .plus{transform:rotate(45deg)}
+.acc .body{padding:0 16px 16px;color:var(--ink-soft);font-size:15px;line-height:1.55}
+.acc .body ul{padding-left:18px;margin:8px 0}
+.acc .body li{margin:6px 0}
+.acc .body strong{color:var(--ink)}
+.legend{display:flex;flex-direction:column;gap:10px}
+.legend .lg{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:var(--ink-soft)}
+.legend .lg .t{margin-top:1px}
+
+/* ---------- bottom nav ---------- */
+.botnav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:color-mix(in srgb,var(--paper) 94%,transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--rule-2);
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+.botnav .row{display:flex;max-width:760px;margin:0 auto;height:var(--nav-h)}
+.navbtn{flex:1;border:none;background:transparent;color:var(--ink-soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;letter-spacing:.02em}
+.navbtn .ic{font-size:19px;line-height:1}
+.navbtn[aria-current="true"]{color:var(--green)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .navbtn[aria-current="true"]{color:var(--green-2)}}
+:root[data-theme="dark"] .navbtn[aria-current="true"]{color:var(--green-2)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (min-width:680px){
+  .catrow .nm{font-size:19px}
+  .results.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .results.two .card{margin:0}
+}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="row">
+    <div class="mark">Paris<small>A working list</small></div>
+    <div class="sp"></div>
+    <button class="iconbtn" id="btn-search" aria-label="Search">🔎</button>
+  </div>
+</header>
+
+<!-- ============ EXPLORE ============ -->
+<main id="view-explore" class="view active">
+  <div class="wrap pad hero">
+    <h1>Paris</h1>
+    <p class="tag">A working list of places worth knowing — passed around by friends, rebuilt for your phone.</p>
+
+    <div class="search">
+      <span class="mag">🔎</span>
+      <input id="q" type="search" placeholder="Search places, food, neighbourhoods…" autocomplete="off" aria-label="Search places">
+      <button class="clr" id="qclr" aria-label="Clear search">×</button>
+    </div>
+
+    <div class="chiprow" id="quickfilters" role="group" aria-label="Quick filters"></div>
+
+    <div id="browse">
+      <p class="sectlabel">By activity</p>
+      <div class="catlist" id="catlist"></div>
+
+      <p class="sectlabel">By neighbourhood</p>
+      <div class="hoodwrap" id="hoodlist"></div>
+
+      <p class="sectlabel">The map</p>
+      <button class="bigbtn" id="openmap">🗺️ Open the full map</button>
+
+      <p class="sectlabel">Ready-made days</p>
+      <div id="daysteaser" class="cards"></div>
+    </div>
+
+    <div id="results" hidden>
+      <div class="results-head">
+        <span class="count" id="rcount"></span>
+        <button class="linkbtn" id="clearall">Clear</button>
+      </div>
+      <div class="cards" id="resultcards"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ MAP ============ -->
+<section id="view-map" class="view" aria-label="Map">
+  <div class="mapbar">
+    <div class="row"><span class="ttl">Map</span></div>
+    <div class="chiprow" id="mapfilters" role="group" aria-label="Map category filters"></div>
+  </div>
+  <div class="routebanner" id="routebanner">
+    <span id="routetitle"></span>
+    <div class="sp" style="flex:1"></div>
+    <button class="linkbtn" id="clearroute" style="color:inherit">Clear route ×</button>
+  </div>
+  <div id="map"></div>
+  <div id="sheet" role="dialog" aria-label="Place details">
+    <button class="sclose" id="sheetclose" aria-label="Close">×</button>
+    <div id="sheetbody"></div>
+  </div>
+</section>
+
+<!-- ============ DAYS ============ -->
+<section id="view-days" class="view" aria-label="Ready-made days">
+  <div class="wrap pad">
+    <h1 class="serif" style="font-size:32px;margin:0 0 4px">Ready-made days</h1>
+    <p style="color:var(--ink-soft);margin:0 0 18px;max-width:52ch">Flexible routes, not rigid schedules. Tap <strong>Open route</strong> to drop the stops on the map in order.</p>
+    <div id="dayfull"></div>
+    <p class="sectlabel">Shorter ideas</p>
+    <div id="miniroutes"></div>
+  </div>
+</section>
+
+<!-- ============ MORE ============ -->
+<section id="view-more" class="view" aria-label="More">
+  <div class="wrap pad">
+    <h1 class="serif" style="font-size:32px;margin:0 0 16px">More</h1>
+
+    <p class="sectlabel">Before you go</p>
+    <div id="beforeacc"></div>
+
+    <p class="sectlabel">Every neighbourhood</p>
+    <div class="hoodwrap" id="hoodlist2"></div>
+
+    <p class="sectlabel">What the labels mean</p>
+    <div class="legend" id="legend"></div>
+
+    <p style="color:var(--ink-soft);font-size:13px;margin:28px 0 0;line-height:1.5">
+      This is an aggregated list from friends, not a single person's picks. Places marked
+      <span class="t s-unresolved">Unresolved</span> couldn't be pinned to one exact address — check before you go.
+      Some spots change hours or close, so confirm on the day.
+    </p>
+  </div>
+</section>
+
+<!-- ============ DETAIL OVERLAY ============ -->
+<div id="overlay">
+  <div class="detailbar"><div class="row">
+    <button class="backbtn" id="backbtn">‹ Back</button>
+    <span id="overtitle" style="font-weight:600"></span>
+  </div></div>
+  <div class="wrap pad" id="overbody"></div>
+</div>
+
+<!-- ============ BOTTOM NAV ============ -->
+<nav class="botnav"><div class="row">
+  <button class="navbtn" data-view="explore" aria-current="true"><span class="ic">⌂</span>Explore</button>
+  <button class="navbtn" data-view="map"><span class="ic">◉</span>Map</button>
+  <button class="navbtn" data-view="days"><span class="ic">☀</span>Days</button>
+  <button class="navbtn" data-view="more"><span class="ic">☰</span>More</button>
+</div></nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ============================================================
+   ONE canonical dataset. Every view is generated from this.
+   status: highly-recommended | recommended | want-to-try | unresolved
+   ============================================================ */
+const CATS = [
+  ["Museums & Art","🎨","#7B2D3A"],
+  ["Parks, Walks & Outdoors","🌳","#2E6B4F"],
+  ["Classic Paris","🗼","#14493F"],
+  ["Restaurants","🍽️","#B4622B"],
+  ["Cafés & Brunch","☕","#9C7E3A"],
+  ["Bars & Speakeasies","🍸","#6D4E8C"],
+  ["Jazz & Live Music","🎷","#2C5A8C"],
+  ["Clubs & Nightlife","🔊","#B23A6B"],
+  ["Shopping & Vintage","🛍️","#C58A3D"],
+  ["Sports & Events","⚽","#3E7D65"]
+];
+const CAT_COLOR = Object.fromEntries(CATS.map(c=>[c[0],c[2]]));
+const CAT_EMO = Object.fromEntries(CATS.map(c=>[c[0],c[1]]));
+
+const HOODS = [
+  "Louvre / Tuileries / Île de la Cité",
+  "Le Marais",
+  "Saint-Germain / Latin Quarter",
+  "Montmartre / Pigalle",
+  "Canal Saint-Martin / Belleville",
+  "Oberkampf / Bastille / Bercy",
+  "Eiffel Tower / Invalides",
+  "Champs-Élysées / West",
+  "Further Out"
+];
+const HOOD_BLURB = {
+  "Louvre / Tuileries / Île de la Cité":"The monumental middle. The big museums, and very walkable end to end.",
+  "Le Marais":"The best area to have no plan. Boutiques, vintage, food, easy to lose an afternoon.",
+  "Saint-Germain / Latin Quarter":"Left bank. High-end shopping one side, students and jazz cellars the other, gardens between.",
+  "Montmartre / Pigalle":"Uphill, all of it. Eating and drinking at the bottom, the view at the top.",
+  "Canal Saint-Martin / Belleville":"The northeast. Young, loose, best on a warm evening along the water.",
+  "Oberkampf / Bastille / Bercy":"East. Where the city eats and drinks on a weeknight, plus two great long walks.",
+  "Eiffel Tower / Invalides":"Grand and open. Two of the best museums, and the boat bars on the river.",
+  "Champs-Élysées / West":"The expensive end. An evening rather than a day — except the Fondation.",
+  "Further Out":"Each of these is its own trip on the metro or RER."
+};
+
+function p(o){return o;}
+const PLACES = [
+ // ---- Louvre / Tuileries / Île de la Cité ----
+ p({id:"louvre",name:"Musée du Louvre",cat:"Museums & Art",hood:"Louvre / Tuileries / Île de la Cité",arr:"1er",status:"recommended",book:true,tags:["rainy-day"],kw:"museum art",note:"Too big to finish, so don't try — pick two or three wings and accept you're missing most of it. The Carrousel arcade entrances beat the pyramid queue. The courtyards are open late and free, the best way to see the pyramid lit.",lat:48.8606,lng:2.3376}),
+ p({id:"orangerie",name:"Musée de l'Orangerie",cat:"Museums & Art",hood:"Louvre / Tuileries / Île de la Cité",arr:"1er",status:"recommended",book:true,tags:["rainy-day"],kw:"impressionist monet waterlilies",note:"Impressionists, and small enough to do properly in an hour.",lat:48.8638,lng:2.3226}),
+ p({id:"arts-deco",name:"Musée des Arts Décoratifs",cat:"Museums & Art",hood:"Louvre / Tuileries / Île de la Cité",arr:"1er",status:"recommended",book:true,tags:["rainy-day"],kw:"fashion design furniture",note:"Same building as the Louvre, separate ticket. Furniture, fashion, jewellery, posters and toys across centuries. Far quieter than its neighbour — a very good rainy afternoon.",lat:48.8632,lng:2.3335}),
+ p({id:"59rivoli",name:"59 Rivoli",cat:"Museums & Art",hood:"Louvre / Tuileries / Île de la Cité",arr:"1er",status:"recommended",tags:["cheap"],kw:"artists free studio",note:"A working artists' building you walk up through, floor by floor. Free.",lat:48.8590,lng:2.3470}),
+ p({id:"sainte-chapelle",name:"Sainte-Chapelle",cat:"Classic Paris",hood:"Louvre / Tuileries / Île de la Cité",arr:"1er",status:"recommended",book:true,tags:["nice-weather"],kw:"stained glass church",note:"The stained glass. Go on a bright day — the whole point is the light through it. Timed entry, book ahead.",lat:48.8554,lng:2.3450}),
+ p({id:"tuileries",name:"Jardin des Tuileries",cat:"Parks, Walks & Outdoors",hood:"Louvre / Tuileries / Île de la Cité",arr:"1er",status:"recommended",tags:["nice-weather"],kw:"garden park chairs",note:"The formal garden from the Louvre to Concorde. Drag a green chair to a pond, which is what they're for. The natural walk between the Louvre and the Champs-Élysées.",lat:48.8635,lng:2.3275}),
+ p({id:"popolare",name:"Pizzeria Popolare",cat:"Restaurants",hood:"Louvre / Tuileries / Île de la Cité",arr:"2e",status:"highly-recommended",book:true,tags:["cheap","good-for-groups"],kw:"italian pizza pasta big mamma",note:"Big Mamma group, and the cheapest of them. South of Montmartre, so it works as lunch before you walk uphill.",lat:48.8668,lng:2.3487}),
+ p({id:"hanoi1988",name:"Ha Noi 1988",cat:"Restaurants",hood:"Louvre / Tuileries / Île de la Cité",arr:"1er",status:"recommended",tags:[],kw:"vietnamese pho noodles",note:"Northern Vietnamese, on the island. There's a second branch on Île Saint-Louis.",lat:48.8556,lng:2.3438}),
+ p({id:"rexclub",name:"Rex Club",cat:"Clubs & Nightlife",hood:"Louvre / Tuileries / Île de la Cité",arr:"2e",status:"recommended",tags:["late-night"],kw:"techno electronic music",note:"The serious techno club, one of the oldest in the city. Pay at the door, no dress-code games — the sound system is the point. Check who's playing first.",lat:48.8709,lng:2.3479}),
+
+ // ---- Le Marais ----
+ p({id:"pompidou",name:"Centre Pompidou",cat:"Museums & Art",hood:"Le Marais",arr:"4e",status:"recommended",book:true,tags:["rainy-day"],kw:"modern contemporary art",note:"Modern and contemporary art in a building turned inside out. The escalator up the front and the top-floor view are half the reason. A long renovation is planned — check it's open first.",lat:48.8607,lng:2.3522}),
+ p({id:"picasso",name:"Musée Picasso",cat:"Museums & Art",hood:"Le Marais",arr:"3e",status:"want-to-try",tags:["rainy-day"],kw:"picasso art mansion",note:"A grand 17th-century mansion holding the largest Picasso collection anywhere — much of it work he kept himself, so the whole arc, not the famous handful. A couple of hours, then back into the shopping streets.",lat:48.8598,lng:2.3626}),
+ p({id:"ofr",name:"Ofr.",cat:"Shopping & Vintage",hood:"Le Marais",arr:"3e",status:"recommended",tags:[],kw:"bookshop magazines prints art",note:"Bookshop, magazine stall, print gallery and hangout in one small room. Heavy on art, photography and independent publishing. A good place to take home something that isn't a keyring.",lat:48.8656,lng:2.3637}),
+ p({id:"snowbunny",name:"Chez Snow Bunny",cat:"Shopping & Vintage",hood:"Le Marais",arr:"3e",status:"recommended",tags:[],kw:"vintage designer",note:"Vintage designer, eight doors down from Ofr. Beautifully curated and priced accordingly.",lat:48.8657,lng:2.3634}),
+ p({id:"nuovo",name:"Nuovo",cat:"Shopping & Vintage",hood:"Le Marais",arr:"3e",status:"recommended",tags:[],kw:"vintage designer basics",note:"More vintage designer, plus their own basics line.",lat:48.8637,lng:2.3646}),
+ p({id:"freepstar",name:"Free'P'Star",cat:"Shopping & Vintage",hood:"Le Marais",arr:"4e",status:"recommended",tags:["cheap"],kw:"vintage thrift cheap",note:"The cheap end of Paris vintage — crammed rails, bins of a few euros, no order to any of it. An hour if you like digging, skip it if you don't.",lat:48.8578,lng:2.3520}),
+ p({id:"sandro",name:"Sandro",cat:"Shopping & Vintage",hood:"Le Marais",arr:"3e",status:"recommended",tags:[],kw:"french fashion label clothes",note:"French label. Their biggest store and the best selection of the lot. 50 Rue Vieille du Temple.",lat:48.8575,lng:2.3597}),
+ p({id:"candelaria",name:"Candelaria",cat:"Bars & Speakeasies",hood:"Le Marais",arr:"3e",status:"recommended",tags:["late-night","cheap"],kw:"tacos margaritas mexican speakeasy",note:"Taquería at the front, bar hidden behind it. Cheap frozen margaritas.",lat:48.8626,lng:2.3639}),
+ p({id:"saovang",name:"Ha Noi 1988 Sao Vàng",cat:"Restaurants",hood:"Le Marais",arr:"4e",status:"recommended",tags:[],kw:"vietnamese pho island",note:"The island branch — smaller and calmer than the Cité one, same kitchen. Clear-broth pho and good fried spring rolls. Handy after an afternoon around Notre-Dame.",lat:48.8515,lng:2.3577}),
+ p({id:"yono",name:"Yono Bar",cat:"Bars & Speakeasies",hood:"Le Marais",arr:"4e",status:"recommended",tags:["cheap"],kw:"bar happy hour",note:"Proper neighbourhood bar in the middle of everything. Good happy hour, easy to get a seat.",lat:48.8570,lng:2.3585}),
+ p({id:"lepicier",name:"L'Épicier",cat:"Bars & Speakeasies",hood:"Le Marais",arr:"3e",status:"recommended",tags:["late-night"],kw:"speakeasy hidden grocery",note:"Speakeasy behind a working grocery, up by République. Finding the door is part of it.",lat:48.8676,lng:2.3560}),
+
+ // ---- Saint-Germain / Latin Quarter ----
+ p({id:"luxembourg",name:"Jardin du Luxembourg",cat:"Parks, Walks & Outdoors",hood:"Saint-Germain / Latin Quarter",arr:"6e",status:"recommended",tags:["nice-weather"],kw:"garden park pond chairs",note:"Lovely year-round, genuinely beautiful in spring and summer. Grab a green chair by the pond.",lat:48.8462,lng:2.3372}),
+ p({id:"shakespeare",name:"Shakespeare & Company",cat:"Classic Paris",hood:"Saint-Germain / Latin Quarter",arr:"5e",status:"recommended",tags:[],kw:"english bookshop books",note:"The English-language bookshop across from Notre-Dame. The ground floor is shoulder to shoulder, but the upstairs reading room is quiet and free to sit in. They'll stamp your book. Café next door if the queue is long.",lat:48.8525,lng:2.3470}),
+ p({id:"huchette",name:"Le Caveau de la Huchette",cat:"Jazz & Live Music",hood:"Saint-Germain / Latin Quarter",arr:"5e",status:"recommended",tags:["late-night"],kw:"jazz swing dancing la la land",note:"Ancient underground jazz club, the one from La La Land. Live music and swing dancing most nights.",lat:48.8530,lng:2.3459}),
+ p({id:"mosquee",name:"Grande Mosquée de Paris",cat:"Cafés & Brunch",hood:"Saint-Germain / Latin Quarter",arr:"5e",status:"recommended",tags:["nice-weather"],kw:"mint tea pastries courtyard",note:"Go for the courtyard tearoom — mint tea and pastries under the fig trees, rather than a full meal.",lat:48.8420,lng:2.3550}),
+ p({id:"sg-designer",name:"Designer shopping (Saint-Germain)",cat:"Shopping & Vintage",hood:"Saint-Germain / Latin Quarter",arr:"6e",status:"recommended",tags:[],kw:"designer luxury high-end shopping",note:"All the big houses, clustered tight around Saint-Germain-des-Prés. Good for looking even if you're not buying.",lat:null,lng:null}),
+ p({id:"entrecote-sg",name:"Le Relais de l'Entrecôte",cat:"Restaurants",hood:"Saint-Germain / Latin Quarter",arr:"6e",status:"highly-recommended",tags:["good-for-groups"],kw:"steak frites french",note:"One menu item: steak and fries, and a second helping comes round. No choices to make, which is exactly why it's so good with parents. Rue Saint-Benoît.",lat:48.8543,lng:2.3335}),
+ p({id:"kodawari",name:"Kodawari Ramen (Yokochō)",cat:"Restaurants",hood:"Saint-Germain / Latin Quarter",arr:"6e",status:"recommended",tags:[],kw:"ramen japanese noodles tokyo",note:"Built to look like a Tokyo alleyway, and it works. Expect a queue — there's a sign-up sheet, so put your name down and go for a walk. 29 Rue Mazarine.",lat:48.8546,lng:2.3388}),
+ p({id:"academie-biere",name:"Académie de la Bière",cat:"Restaurants",hood:"Saint-Germain / Latin Quarter",arr:"5e",status:"recommended",tags:["good-for-groups"],kw:"belgian mussels beer frites",note:"Belgian. Mussels, frites and a very long beer list. Portions are enormous.",lat:48.8382,lng:2.3389}),
+ p({id:"deux-magots",name:"Les Deux Magots",cat:"Cafés & Brunch",hood:"Saint-Germain / Latin Quarter",arr:"6e",status:"recommended",tags:[],kw:"famous cafe coffee",note:"Famous, photogenic, priced like it. Worth one coffee.",lat:48.8540,lng:2.3330}),
+
+ // ---- Montmartre / Pigalle ----
+ p({id:"sacrecoeur",name:"Sacré-Cœur",cat:"Classic Paris",hood:"Montmartre / Pigalle",arr:"18e",status:"highly-recommended",tags:["nice-weather","sunset"],kw:"view basilica dome sunset steps",note:"Pay the €7 and climb to the very top of the dome — the bit people skip, and the best view in Paris. Then come down and sit on the front steps for sunset.",lat:48.8867,lng:2.3431}),
+ p({id:"martyrs",name:"Rue des Martyrs",cat:"Classic Paris",hood:"Montmartre / Pigalle",arr:"9e",status:"recommended",tags:[],kw:"market street bakeries cheese walk",note:"The nicest way to make the climb. A working market street — bakeries, cheese shops, fishmongers — running most of the way up to the butte, so you graze rather than slog.",lat:48.8795,lng:2.3410}),
+ p({id:"recyclerie",name:"La REcyclerie",cat:"Cafés & Brunch",hood:"Montmartre / Pigalle",arr:"18e",status:"recommended",tags:[],kw:"cafe urban farm railway",note:"Café and urban farm in a disused railway station, at the top edge of the 18e.",lat:48.8976,lng:2.3447}),
+ p({id:"bouillon",name:"Bouillon Pigalle",cat:"Restaurants",hood:"Montmartre / Pigalle",arr:"18e",status:"highly-recommended",tags:["cheap"],kw:"classic french cheap bouillon",note:"Classic French for almost no money. No reservations and a serious queue — arrive ten minutes before it opens and walk straight in.",lat:48.8823,lng:2.3376}),
+ p({id:"pinkmamma",name:"Pink Mamma",cat:"Restaurants",hood:"Montmartre / Pigalle",arr:"9e",status:"recommended",book:true,tags:[],kw:"italian big mamma truffle beef pretty",note:"The prettiest Big Mamma — four floors of a narrow townhouse, greenhouse roof on top. Ask for the top floor when you book. Truffle pasta and the beef.",lat:48.8817,lng:2.3345}),
+ p({id:"aca",name:"Açà",cat:"Restaurants",hood:"Montmartre / Pigalle",arr:"18e",status:"recommended",tags:["cheap"],kw:"mexican tacos taco tuesday",note:"Mexican, cheap, always busy. Taco Tuesday is the move. 48 Bd de Clichy.",lat:48.8830,lng:2.3330}),
+ p({id:"hanoicaphe",name:"Hanoï Cà Phê",cat:"Bars & Speakeasies",hood:"Montmartre / Pigalle",arr:"9e",status:"recommended",tags:["late-night","good-for-groups"],kw:"vietnamese dj terrace night out",note:"Vietnamese, two floors, big terrace and a DJ. More of a night out than a dinner.",lat:48.8712,lng:2.3360}),
+ p({id:"emmaus",name:"Emmaüs",cat:"Shopping & Vintage",hood:"Montmartre / Pigalle",arr:"9e",status:"recommended",tags:["cheap"],kw:"charity thrift second hand",note:"Charity thrift. Proper rack-digging, real prices.",lat:48.8830,lng:2.3480}),
+
+ // ---- Canal Saint-Martin / Belleville ----
+ p({id:"canal",name:"Canal Saint-Martin",cat:"Parks, Walks & Outdoors",hood:"Canal Saint-Martin / Belleville",arr:"10e",status:"highly-recommended",tags:["nice-weather"],kw:"canal walk water footbridges",note:"Walk the whole thing. Iron footbridges, locks, and people drinking on the banks.",lat:48.8709,lng:2.3660}),
+ p({id:"buttes",name:"Parc des Buttes-Chaumont",cat:"Parks, Walks & Outdoors",hood:"Canal Saint-Martin / Belleville",arr:"19e",status:"recommended",tags:["nice-weather"],kw:"park hills temple cliff",note:"Steep, wild and hilly rather than formal. There's a temple on a cliff in the middle of it.",lat:48.8809,lng:2.3829}),
+ p({id:"paname",name:"Paname Brewing Company",cat:"Bars & Speakeasies",hood:"Canal Saint-Martin / Belleville",arr:"19e",status:"highly-recommended",tags:["nice-weather","good-for-groups"],kw:"brewery beer terrace water deck",note:"Brewery with a deck out over the water. Food's good, but the terrace is the reason.",lat:48.8880,lng:2.3720}),
+ p({id:"baranaan",name:"BaraNaan",cat:"Restaurants",hood:"Canal Saint-Martin / Belleville",arr:"10e",status:"recommended",book:true,tags:[],kw:"indian speakeasy cocktails sleeper train",note:"Indian street food and cocktails, fitted out like an Indian sleeper train — you sit in the berths. Reservation only, really.",lat:48.8690,lng:2.3560}),
+ p({id:"libertino",name:"Libertino",cat:"Restaurants",hood:"Canal Saint-Martin / Belleville",arr:"10e",status:"recommended",book:true,tags:[],kw:"italian roman big mamma",note:"Big Mamma's Roman one.",lat:48.8760,lng:2.3480}),
+ p({id:"lavomatic",name:"Lavomatic",cat:"Bars & Speakeasies",hood:"Canal Saint-Martin / Belleville",arr:"10e",status:"recommended",tags:["late-night"],kw:"speakeasy laundrette hidden",note:"Speakeasy through a working laundrette. Tiny, so the queue is real — book if you can.",lat:48.8690,lng:2.3600}),
+ p({id:"floreal",name:"Floréal Belleville",cat:"Cafés & Brunch",hood:"Canal Saint-Martin / Belleville",arr:"20e",status:"recommended",tags:[],kw:"coffee shop belleville",note:"A coffee shop rather than a bar, despite where it ended up on the old list.",lat:48.8700,lng:2.3830}),
+
+ // ---- Oberkampf / Bastille / Bercy ----
+ p({id:"lumieres",name:"L'Atelier des Lumières",cat:"Museums & Art",hood:"Oberkampf / Bastille / Bercy",arr:"11e",status:"recommended",tags:["rainy-day"],kw:"immersive projected art foundry",note:"Projected art filling an old foundry, floor to ceiling. Exhibitions rotate, so check what's showing.",lat:48.8636,lng:2.3805}),
+ p({id:"coulee",name:"La Coulée verte René-Dumont",cat:"Parks, Walks & Outdoors",hood:"Oberkampf / Bastille / Bercy",arr:"12e",status:"want-to-try",tags:["nice-weather"],kw:"elevated walk viaduct high line",note:"Four kilometres of planted walkway along an old railway viaduct, above the street. Start at Bastille.",lat:48.8492,lng:2.3730}),
+ p({id:"vincennes",name:"Bois de Vincennes",cat:"Parks, Walks & Outdoors",hood:"Oberkampf / Bastille / Bercy",arr:"12e",status:"want-to-try",tags:["nice-weather"],kw:"lake rowing boat park",note:"Rent a rowing boat on the lake for an hour.",lat:48.8340,lng:2.4330}),
+ p({id:"paperboy",name:"Paperboy",cat:"Cafés & Brunch",hood:"Oberkampf / Bastille / Bercy",arr:"11e",status:"recommended",tags:[],kw:"breakfast brunch eggs sandwiches",note:"Breakfast and lunch only, closes mid-afternoon. Sandwiches and eggs done properly.",lat:48.8640,lng:2.3680}),
+ p({id:"gramme",name:"Gramme",cat:"Restaurants",hood:"Oberkampf / Bastille / Bercy",arr:"11e",status:"recommended",book:true,tags:[],kw:"small plates brunch dinner",note:"Small sharing plates. Brunch is weekends only, dinner the rest of the week, worth it either way. Book.",lat:48.8665,lng:2.3775}),
+ p({id:"groundcontrol",name:"Ground Control",cat:"Restaurants",hood:"Oberkampf / Bastille / Bercy",arr:"12e",status:"recommended",tags:["good-for-groups"],kw:"food hall railway sheds groups",note:"Enormous food hall in old railway sheds. Closed Monday and Tuesday. The best option here for a big group — nobody has to agree on anything.",lat:48.8420,lng:2.3870}),
+ p({id:"caphe-bercy",name:"Hanoï Cà Phê Bercy",cat:"Restaurants",hood:"Oberkampf / Bastille / Bercy",arr:"12e",status:"recommended",tags:["good-for-groups"],kw:"vietnamese bercy village",note:"The second branch, out in Bercy Village — pedestrianised converted wine warehouses. Same menu as the Opéra one, more room, easier to get a table on a Friday.",lat:48.8330,lng:2.3865}),
+ p({id:"pachamama",name:"Pachamama",cat:"Clubs & Nightlife",hood:"Oberkampf / Bastille / Bercy",arr:"11e",status:"want-to-try",tags:["late-night"],kw:"latin pop club strict door",note:"Latin and pop. Strict, unpredictable door — read the nightlife note in More before you build a night around it.",lat:48.8520,lng:2.3760}),
+
+ // ---- Eiffel Tower / Invalides ----
+ p({id:"orsay",name:"Musée d'Orsay",cat:"Museums & Art",hood:"Eiffel Tower / Invalides",arr:"7e",status:"highly-recommended",tags:["rainy-day"],kw:"van gogh monet signac railway station impressionist",note:"The favourite. Van Gogh, Monet, Signac in a converted railway station — walk the sculpture floor too, not just the galleries. Buy ahead, or queue on a weekday and it won't be bad.",lat:48.8600,lng:2.3266}),
+ p({id:"eiffel",name:"Eiffel Tower",cat:"Classic Paris",hood:"Eiffel Tower / Invalides",arr:"7e",status:"recommended",tags:["nice-weather","sunset"],kw:"eiffel tower sparkle picnic champ de mars",note:"Picnic on the Champ de Mars if the weather's good. Come back after dark — it sparkles for the first five minutes of every hour after sunset, and that's free from any sightline.",lat:48.8584,lng:2.2945}),
+ p({id:"rodin",name:"Musée Rodin",cat:"Museums & Art",hood:"Eiffel Tower / Invalides",arr:"7e",status:"want-to-try",tags:["nice-weather"],kw:"sculpture garden rodin",note:"Sculpture garden as much as a museum — there's a garden-only ticket if you're short on time.",lat:48.8553,lng:2.3159}),
+ p({id:"laterrasse",name:"La Terrasse",cat:"Restaurants",hood:"Eiffel Tower / Invalides",arr:"7e",status:"recommended",tags:[],kw:"french brasserie terrace ecole militaire",note:"Straightforward French brasserie near the École Militaire, a short walk back from the tower. Classic menu, big heated terrace, open late — the sensible dinner where most places near the tower are a trap.",lat:48.8545,lng:2.3050}),
+ p({id:"rosabonheur",name:"Rosa Bonheur sur Seine & Fluctuart",cat:"Bars & Speakeasies",hood:"Eiffel Tower / Invalides",arr:"7e",status:"recommended",tags:["nice-weather"],kw:"boat bars river seine free",note:"Two moored boats on the river, both free to get into and both better in daylight than at 2am.",lat:48.8625,lng:2.3170}),
+
+ // ---- Champs-Élysées / West ----
+ p({id:"arc",name:"Arc de Triomphe",cat:"Classic Paris",hood:"Champs-Élysées / West",arr:"8e",status:"highly-recommended",tags:["sunset"],kw:"arc triomphe view rooftop",note:"Go up it. Use the underpass to reach it — do not try to cross the roundabout.",lat:48.8738,lng:2.2950}),
+ p({id:"fondation",name:"Fondation Louis Vuitton",cat:"Museums & Art",hood:"Champs-Élysées / West",arr:"16e",status:"highly-recommended",tags:[],kw:"gehry building modern art bois de boulogne",note:"About thirty minutes out on the metro and worth every one. The Gehry building is as good as whatever's hanging inside it.",lat:48.8766,lng:2.2633}),
+ p({id:"psg",name:"PSG at the Parc des Princes",cat:"Sports & Events",hood:"Champs-Élysées / West",arr:"16e",status:"want-to-try",book:true,tags:[],kw:"football ligue 1 psg stadium ultras",note:"Ligue 1 in a steep, loud, old-fashioned stadium inside the city, ~15 min on the metro from the Arc. Tickets go on sale in waves and vanish — buy as soon as you know your dates. The ultras behind the goal are the reason to go.",lat:48.8414,lng:2.2530}),
+ p({id:"champs-happy",name:"Happy hour on the Champs-Élysées",cat:"Bars & Speakeasies",hood:"Champs-Élysées / West",arr:"8e",status:"recommended",tags:[],kw:"happy hour drinks champs elysees",note:"Touristy and you'll pay for the address, but it's the right way to end the river-crossing day.",lat:null,lng:null}),
+ p({id:"entrecote-champs",name:"Le Relais de l'Entrecôte (Marbeuf)",cat:"Restaurants",hood:"Champs-Élysées / West",arr:"8e",status:"recommended",tags:["good-for-groups"],kw:"steak frites second location",note:"Same steak, second location, if the Saint-Germain one is full. Rue Marbeuf.",lat:48.8690,lng:2.3010}),
+ p({id:"larc",name:"L'Arc & L'Aquarium",cat:"Clubs & Nightlife",hood:"Champs-Élysées / West",arr:"8e",status:"want-to-try",tags:["late-night"],kw:"upmarket exclusive club strict door",note:"Upmarket, exclusive, very strict doors, near the Arc. Read the nightlife note in More before you build a night around either.",lat:48.8728,lng:2.2935}),
+
+ // ---- Further Out ----
+ p({id:"catacombs",name:"The Catacombs",cat:"Classic Paris",hood:"Further Out",arr:"14e",status:"want-to-try",book:true,tags:[],kw:"bones underground tunnels ossuary",note:"Kilometres of bones under the city. Sells out days ahead, so book. Cold down there — bring a layer.",lat:48.8338,lng:2.3324}),
+ p({id:"felicita",name:"La Felicità",cat:"Restaurants",hood:"Further Out",arr:"13e",status:"recommended",book:true,tags:["good-for-groups"],kw:"food hall big mamma station f",note:"Big Mamma's food hall in a converted railway depot at Station F. Check it's open before you go — it's been in and out.",lat:48.8340,lng:2.3720}),
+ p({id:"sceaux",name:"Parc de Sceaux",cat:"Parks, Walks & Outdoors",hood:"Further Out",arr:"RER B",status:"want-to-try",tags:["nice-weather"],kw:"cherry blossom sakura park spring",note:"Only really worth it in cherry blossom season — a narrow window around late March and early April. RER B, south of the city.",lat:48.7700,lng:2.2970}),
+ p({id:"wanderlust",name:"Wanderlust",cat:"Clubs & Nightlife",hood:"Further Out",arr:"13e",status:"recommended",tags:["late-night"],kw:"riverside club electronic schedule",note:"Big riverside club. Check the schedule and go for a specific night rather than on spec.",lat:48.8380,lng:2.3720}),
+ p({id:"rosebonbon",name:"Rose Bonbon",cat:"Clubs & Nightlife",hood:"Further Out",arr:"15e",status:"want-to-try",tags:["late-night"],kw:"edm river southwest club",note:"EDM on the river in the far southwest — much further from the Eiffel Tower than it sounds.",lat:48.8380,lng:2.2730}),
+ p({id:"seineboat",name:"Seine boat tour",cat:"Classic Paris",hood:"Further Out",arr:"central",status:"recommended",tags:["sunset"],kw:"boat cruise river bateau",note:"Board near Pont Neuf or the Eiffel Tower. Better after dark.",lat:48.8570,lng:2.3410}),
+
+ // ---- Unresolved (kept in the list, left off the map) ----
+ p({id:"jazz-openmic",name:"Jazz & open-mic nights",cat:"Jazz & Live Music",hood:"Further Out",arr:"—",status:"unresolved",tags:[],kw:"jazz open mic live music listings",note:"Left on the old list without a venue. Le Caveau de la Huchette covers the jazz side; for open mics, check listings once you know your dates.",lat:null,lng:null}),
+ p({id:"dimsum",name:"Dim Sum House",cat:"Restaurants",hood:"Further Out",arr:"—",status:"unresolved",tags:[],kw:"dim sum chinese dumplings",note:"Nothing in Paris matches that name exactly. Closest are DimDimSum (Rue du Grenier-Saint-Lazare, 3e) and Chez Ann (Rue de l'Échiquier, 10e) — both good. Worth checking which one you meant.",lat:null,lng:null}),
+ p({id:"aca-canal",name:"Açà (second branch, Canal)",cat:"Restaurants",hood:"Further Out",arr:"—",status:"unresolved",tags:[],kw:"aca p food canal mexican",note:"The Pigalle Açà is confirmed at 48 Bd de Clichy. There seems to be another near Canal Saint-Martin — probably the one on the old list as \"ACA P Food\". Not pinned to an exact address yet.",lat:null,lng:null})
+];
+
+/* ---------- ready-made days ---------- */
+const DAYS = [
+  {id:"canal",title:"Canal day",cond:"sun",condtxt:"☀ Best in nice weather",steps:[
+    {t:"Walk the length of Canal Saint-Martin",pid:"canal"},
+    {t:"Food or a beer at Paname Brewing Company",pid:"paname"},
+    {t:"Finish in Parc des Buttes-Chaumont",pid:"buttes"}]},
+  {id:"montmartre",title:"Montmartre day",cond:"any",condtxt:"● Any weather",steps:[
+    {t:"Lunch at Pizzeria Popolare — book it",pid:"popolare"},
+    {t:"Walk north and up, via Rue des Martyrs",pid:"martyrs"},
+    {t:"Sacré-Cœur — pay the €7 to climb to the top",pid:"sacrecoeur"},
+    {t:"Sit on the front steps for sunset",pid:"sacrecoeur"}]},
+  {id:"classic",title:"River-crossing day",cond:"sun",condtxt:"☀ Best in nice weather",steps:[
+    {t:"Pastries, wherever you are"},
+    {t:"Jardin du Luxembourg",pid:"luxembourg"},
+    {t:"Walk to the Louvre, then go in",pid:"louvre"},
+    {t:"Out through the Tuileries",pid:"tuileries"},
+    {t:"Up the Champs-Élysées for happy hour",pid:"champs-happy"},
+    {t:"Arc de Triomphe — go up it",pid:"arc"}]}
+];
+const MINI = [
+  {id:"marais-pm",title:"Marais afternoon",cond:"any",condtxt:"● Wander, no plan",steps:[
+    {t:"Browse Ofr.",pid:"ofr"},{t:"Vintage at Chez Snow Bunny",pid:"snowbunny"},
+    {t:"Margaritas at Candelaria",pid:"candelaria"},{t:"End at Yono Bar",pid:"yono"}]},
+  {id:"rainy",title:"Rainy museum day",cond:"any",condtxt:"☂ Indoors",steps:[
+    {t:"Musée d'Orsay",pid:"orsay"},{t:"Then the Orangerie",pid:"orangerie"},
+    {t:"Or the Arts Décoratifs if you want quiet",pid:"arts-deco"}]},
+  {id:"eiffel-eve",title:"Eiffel + Seine evening",cond:"sun",condtxt:"☀ Evening",steps:[
+    {t:"Picnic on the Champ de Mars",pid:"eiffel"},{t:"Drinks on a boat at Rosa Bonheur",pid:"rosabonheur"},
+    {t:"Back for the tower sparkle after dark",pid:"eiffel"}]},
+  {id:"bastille-walk",title:"Bastille + Coulée verte",cond:"sun",condtxt:"☀ Long walk",steps:[
+    {t:"Walk the Coulée verte from Bastille",pid:"coulee"},{t:"Food hall at Ground Control",pid:"groundcontrol"}]},
+  {id:"shopping",title:"Shopping afternoon",cond:"any",condtxt:"● Retail",steps:[
+    {t:"Marais vintage — Free'P'Star, Nuovo, Sandro",pid:"sandro"},
+    {t:"Cross to Saint-Germain for the designer houses",pid:"sg-designer"}]},
+  {id:"bignight",title:"Big night out",cond:"any",condtxt:"🌙 Late",steps:[
+    {t:"Start with margaritas at Candelaria",pid:"candelaria"},
+    {t:"Techno at Rex Club, or a boat at Wanderlust",pid:"rexclub"}]}
+];
+
+/* ---------- quick filters ---------- */
+const QUICK = [
+  {id:"nice-weather",label:"☀ Nice weather",test:pl=>pl.tags.includes("nice-weather")},
+  {id:"rainy-day",label:"☂ Rainy day",test:pl=>pl.tags.includes("rainy-day")},
+  {id:"tonight",label:"🌙 Tonight",test:pl=>["Bars & Speakeasies","Clubs & Nightlife","Jazz & Live Music"].includes(pl.cat)||pl.tags.includes("late-night")},
+  {id:"cheap",label:"€ Cheap",test:pl=>pl.tags.includes("cheap")},
+  {id:"book-ahead",label:"📅 Book ahead",test:pl=>!!pl.book},
+  {id:"highly",label:"★ Highly recommended",test:pl=>pl.status==="highly-recommended"},
+  {id:"want",label:"○ Want to try",test:pl=>pl.status==="want-to-try"}
+];
+
+const STATUS_LABEL={"highly-recommended":"Highly recommended","recommended":"Recommended","want-to-try":"Want to try","unresolved":"Unresolved"};
+const STATUS_CLASS={"highly-recommended":"s-highly","recommended":"s-recommended","want-to-try":"s-want","unresolved":"s-unresolved"};
+const TAG_LABEL={"nice-weather":"Nice weather","rainy-day":"Rainy day","sunset":"Sunset","late-night":"Late night","cheap":"Cheap","good-for-groups":"Good for groups"};
+
+/* ============================================================ helpers */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.prototype.slice.call(r.querySelectorAll(s));
+const byId=id=>PLACES.find(p=>p.id===id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mapsSearch=p=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name.replace(/\s*\(.*?\)/,"")+" Paris")}`;
+const mapsDir=p=>`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.name.replace(/\s*\(.*?\)/,"")+" Paris")}&travelmode=walking`;
+
+function tagsHTML(p){
+  let h=`<span class="t ${STATUS_CLASS[p.status]}">${STATUS_LABEL[p.status]}</span>`;
+  if(p.book) h+=`<span class="t book">Book ahead</span>`;
+  p.tags.forEach(t=>{ if(TAG_LABEL[t]) h+=`<span class="t ctx">${TAG_LABEL[t]}</span>`; });
+  return h;
+}
+function actionsHTML(p){
+  if(p.status==="unresolved") return "";
+  return `<div class="actions">
+    <a class="act primary" target="_blank" rel="noopener" href="${mapsSearch(p)}">◍ Map</a>
+    <a class="act" target="_blank" rel="noopener" href="${mapsDir(p)}">→ Directions</a>
+  </div>`;
+}
+function cardHTML(p){
+  const nameHTML = p.status==="unresolved"
+    ? `<h3>${esc(p.name)}</h3>`
+    : `<h3><a target="_blank" rel="noopener" href="${mapsSearch(p)}">${esc(p.name)}</a></h3>`;
+  return `<article class="card">
+    <div class="top"><div>${nameHTML}
+      <p class="meta">${esc(p.cat)} · ${esc(p.hood.split(" / ")[0])} · ${esc(p.arr)}</p></div></div>
+    <div class="tags">${tagsHTML(p)}</div>
+    <p class="note">${esc(p.note)}</p>
+    ${actionsHTML(p)}
+  </article>`;
+}
+const STATUS_ORDER={"highly-recommended":0,"recommended":1,"want-to-try":2,"unresolved":3};
+function sortPlaces(a,b){return (STATUS_ORDER[a.status]-STATUS_ORDER[b.status])||a.name.localeCompare(b.name);}
+
+/* ============================================================ view switching */
+let currentView="explore", mapReady=false;
+function showView(v){
+  currentView=v;
+  $$(".view").forEach(el=>el.classList.remove("active"));
+  $("#view-"+v).classList.add("active");
+  $$(".navbtn").forEach(b=>b.setAttribute("aria-current", b.dataset.view===v?"true":"false"));
+  window.scrollTo(0,0);
+  if(v==="map"){ initMap(); setTimeout(()=>map.invalidateSize(),60); }
+}
+$$(".navbtn").forEach(b=>b.addEventListener("click",()=>{ closeOverlay(); showView(b.dataset.view); }));
+$("#openmap").addEventListener("click",()=>showView("map"));
+$("#btn-search").addEventListener("click",()=>{ showView("explore"); $("#q").focus(); });
+
+/* ============================================================ EXPLORE */
+function renderQuickFilters(){
+  $("#quickfilters").innerHTML = QUICK.map(f=>
+    `<button class="chip" role="button" aria-pressed="false" data-f="${f.id}">${f.label}</button>`).join("");
+  $$("#quickfilters .chip").forEach(c=>c.addEventListener("click",()=>{
+    const on=c.getAttribute("aria-pressed")==="true";
+    c.setAttribute("aria-pressed", on?"false":"true");
+    if(on) activeFilters.delete(c.dataset.f); else activeFilters.add(c.dataset.f);
+    renderExplore();
+  }));
+}
+function renderCats(){
+  const counts={}; PLACES.forEach(p=>counts[p.cat]=(counts[p.cat]||0)+1);
+  $("#catlist").innerHTML = CATS.filter(c=>counts[c[0]]).map(c=>
+    `<button class="catrow" data-cat="${esc(c[0])}">
+      <span class="emo">${c[1]}</span><span class="nm">${esc(c[0])}</span>
+      <span class="ct">${counts[c[0]]}</span><span class="arr">›</span></button>`).join("");
+  $$("#catlist .catrow").forEach(b=>b.addEventListener("click",()=>openCategory(b.dataset.cat)));
+}
+function renderHoods(elId){
+  $("#"+elId).innerHTML = HOODS.map(h=>`<button class="hoodchip" data-hood="${esc(h)}">${esc(h.split(" / ")[0])}</button>`).join("");
+  $$("#"+elId+" .hoodchip").forEach(b=>b.addEventListener("click",()=>openHood(b.dataset.hood)));
+}
+function renderDaysTeaser(){
+  $("#daysteaser").innerHTML = DAYS.map(d=>
+    `<button class="catrow" data-day="${d.id}" style="text-align:left">
+      <span class="emo">${d.cond==="sun"?"☀":"●"}</span>
+      <span class="nm">${esc(d.title)}</span><span class="arr">›</span></button>`).join("");
+  $$("#daysteaser [data-day]").forEach(b=>b.addEventListener("click",()=>showView("days")));
+}
+
+let activeFilters=new Set(), query="";
+function currentMatches(){
+  let list=PLACES.slice();
+  if(activeFilters.size){ list=list.filter(p=>Array.from(activeFilters).every(f=>{const q=QUICK.find(x=>x.id===f);return q&&q.test(p);})); }
+  if(query){
+    const t=query.toLowerCase();
+    list=list.filter(p=>[p.name,p.cat,p.hood,p.arr,p.note,(p.kw||""),p.tags.join(" ")].join(" ").toLowerCase().includes(t));
+  }
+  return list.sort(sortPlaces);
+}
+function renderExplore(){
+  const active = activeFilters.size>0 || query.trim().length>0;
+  $("#browse").hidden = active;
+  $("#results").hidden = !active;
+  if(active){
+    const list=currentMatches();
+    $("#rcount").textContent = list.length + (list.length===1?" place":" places");
+    $("#resultcards").innerHTML = list.length? list.map(cardHTML).join("") : `<p class="empty">Nothing matches that yet. Try another word.</p>`;
+  }
+}
+$("#q").addEventListener("input",e=>{ query=e.target.value; $("#qclr").classList.toggle("show",!!query); renderExplore(); });
+$("#qclr").addEventListener("click",()=>{ query=""; $("#q").value=""; $("#qclr").classList.remove("show"); renderExplore(); $("#q").focus(); });
+$("#clearall").addEventListener("click",()=>{
+  activeFilters.clear(); query=""; $("#q").value=""; $("#qclr").classList.remove("show");
+  $$("#quickfilters .chip").forEach(c=>c.setAttribute("aria-pressed","false")); renderExplore();
+});
+
+/* ============================================================ DETAIL OVERLAY (category / neighbourhood) */
+const overlay=$("#overlay");
+function openOverlay(title,html){
+  $("#overtitle").textContent=title;
+  $("#overbody").innerHTML=html;
+  overlay.classList.add("show"); overlay.scrollTop=0;
+  $$("#overbody a.card-map").forEach(a=>{}); // links are plain anchors
+}
+function closeOverlay(){ overlay.classList.remove("show"); }
+$("#backbtn").addEventListener("click",closeOverlay);
+
+function openCategory(cat){
+  const list=PLACES.filter(p=>p.cat===cat).sort(sortPlaces);
+  const html=`<h1 class="detail-h serif">${esc(cat)}</h1>
+    <p class="detail-sub">${list.length} place${list.length===1?"":"s"}</p>
+    <div class="cards">${list.map(cardHTML).join("")}</div>`;
+  openOverlay(cat,html);
+}
+function openHood(hood){
+  const list=PLACES.filter(p=>p.hood===hood);
+  let html=`<h1 class="detail-h serif">${esc(hood.split(" / ")[0])}</h1>
+    <p class="detail-sub">${esc(hood)} — ${esc(HOOD_BLURB[hood]||"")}</p>`;
+  // group by category, in CATS order
+  CATS.forEach(c=>{
+    const g=list.filter(p=>p.cat===c[0]).sort(sortPlaces);
+    if(g.length){ html+=`<p class="grouplabel">${c[1]} ${esc(c[0])}</p><div class="cards">${g.map(cardHTML).join("")}</div>`; }
+  });
+  // any category not in CATS (Jazz uses CATS, fine) — catch leftovers
+  const shown=new Set(CATS.map(c=>c[0]));
+  const rest=list.filter(p=>!shown.has(p.cat)).sort(sortPlaces);
+  if(rest.length) html+=`<p class="grouplabel">More</p><div class="cards">${rest.map(cardHTML).join("")}</div>`;
+  openOverlay(hood.split(" / ")[0],html);
+}
+
+/* ============================================================ DAYS */
+function dayCardHTML(d,withRoute){
+  const hasRoute = d.steps.some(s=>s.pid && byId(s.pid) && byId(s.pid).lat!=null);
+  return `<div class="day">
+    <h3 class="serif">${esc(d.title)}</h3>
+    <p class="cond ${d.cond==="sun"?"sun":"any"}">${esc(d.condtxt)}</p>
+    <ol>${d.steps.map(s=>`<li>${esc(s.t)}</li>`).join("")}</ol>
+    ${withRoute&&hasRoute?`<button class="bigbtn route" data-route="${d.id}">🗺️ Open route on map</button>`:""}
+  </div>`;
+}
+function renderDays(){
+  $("#dayfull").innerHTML = DAYS.map(d=>dayCardHTML(d,true)).join("");
+  $("#miniroutes").innerHTML = MINI.map(d=>dayCardHTML(d,true)).join("");
+  $$("[data-route]").forEach(b=>b.addEventListener("click",()=>{ const d=[...DAYS,...MINI].find(x=>x.id===b.dataset.route); showView("map"); setTimeout(()=>drawRoute(d),120); }));
+}
+
+/* ============================================================ MORE: before-you-go + legend */
+const BEFORE=[
+  {t:"Book these ahead",h:`<ul>
+    <li><strong>Any Big Mamma</strong> — Popolare, Pink Mamma, Libertino, La Felicità. They fill up.</li>
+    <li><strong>BaraNaan</strong> — reservation only, really.</li>
+    <li><strong>The Catacombs</strong> — sells out days ahead.</li>
+    <li><strong>Sainte-Chapelle</strong> — timed entry.</li>
+    <li><strong>Orsay, Orangerie, Pompidou, Arts Décoratifs</strong> — buy online to skip the queue. Orsay on a weekday is usually fine without.</li>
+    <li><strong>PSG</strong> — tickets go fast.</li>
+    <li><strong>Bouillon Pigalle</strong> is the opposite — no reservations at all. Turn up ten minutes before opening and walk in.</li></ul>`},
+  {t:"Museums — closures & timed entry",h:`Some museums close one day a week and several use timed slots, so check the day's opening before you set off. Pompidou has a long renovation closure planned — confirm it's open. La Felicità has been in and out.`},
+  {t:"Nightlife & club doors",h:`EDM and techno clubs are simple: pay admission and you're in. Anything mainstream or upmarket runs a door policy on how early you arrive and how you're dressed — relaxed before ~9pm, a lottery after. Dress up, go early, and don't build a night around one strict-door place. The exclusive clubs (L'Arc, Pachamama, Rose Bonbon) draw steady complaints about arbitrary refusals — have a backup.`},
+  {t:"The Eiffel Tower sparkle",h:`See it at night. It sparkles for the first five minutes of every hour after sunset — a completely different thing from the daytime version, and free from any sightline.`},
+  {t:"Useful app — Shotgun",h:`Download <strong>Shotgun</strong> if you're into electronic music. It lists what's on across the city each night, which beats guessing.`},
+  {t:"One general note",h:`Hours and availability change. This is an aggregated friend list, not a live database — confirm on the day, especially for the further-out spots.`}
+];
+function renderBefore(){
+  $("#beforeacc").innerHTML = BEFORE.map(b=>
+    `<details class="acc"><summary>${esc(b.t)}<span class="plus">+</span></summary><div class="body">${b.h}</div></details>`).join("");
+}
+function renderLegend(){
+  const items=[
+    ["s-highly","Highly recommended","Someone on the list strongly recommends going."],
+    ["s-recommended","Recommended","A positive recommendation, not singled out as a must-do."],
+    ["s-want","Want to try","On the list, but the recommender hadn't been yet."],
+    ["s-unresolved","Unresolved","Couldn't be pinned to one exact place — check before you go."]
+  ];
+  $("#legend").innerHTML = items.map(i=>
+    `<div class="lg"><span class="t ${i[0]}">${i[1]}</span><span>${i[2]}</span></div>`).join("")
+    + `<div class="lg"><span class="t book">Book ahead</span><span>Reservations or timed tickets strongly recommended.</span></div>`;
+}
+
+/* ============================================================ MAP */
+let map, markerLayer, routeLayer;
+function initMap(){
+  if(mapReady) return; mapReady=true;
+  map=L.map("map",{zoomControl:true,scrollWheelZoom:true}).setView([48.8600,2.3450],12.4);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19, attribution:'&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  markerLayer=L.layerGroup().addTo(map);
+  routeLayer=L.layerGroup().addTo(map);
+  renderMapFilters();
+  renderMarkers();
+  fitAll();
+}
+function mappable(){ return PLACES.filter(p=>p.lat!=null&&p.lng!=null); }
+let mapCats=new Set(); // empty = all
+function renderMapFilters(){
+  const cats=CATS.filter(c=>mappable().some(p=>p.cat===c[0]));
+  $("#mapfilters").innerHTML =
+    `<button class="chip on" data-mc="__all">All</button>`+
+    cats.map(c=>`<button class="chip" data-mc="${esc(c[0])}"><span class="dot" style="background:${c[2]}"></span>${esc(c[0].split(" & ")[0].split(",")[0])}</button>`).join("");
+  $$("#mapfilters .chip").forEach(ch=>ch.addEventListener("click",()=>{
+    const v=ch.dataset.mc;
+    if(v==="__all"){ mapCats.clear(); }
+    else{ if(mapCats.has(v)) mapCats.delete(v); else mapCats.add(v); }
+    $$("#mapfilters .chip").forEach(c=>{
+      if(c.dataset.mc==="__all") c.classList.toggle("on",mapCats.size===0);
+      else c.classList.toggle("on",mapCats.has(c.dataset.mc));
+    });
+    clearRoute(); renderMarkers();
+  }));
+}
+function renderMarkers(){
+  markerLayer.clearLayers();
+  mappable().forEach(p=>{
+    if(mapCats.size && !mapCats.has(p.cat)) return;
+    const m=L.circleMarker([p.lat,p.lng],{
+      radius:8, color:"#fff", weight:2, fillColor:CAT_COLOR[p.cat]||"#555", fillOpacity:1
+    });
+    m.on("click",()=>openSheet(p));
+    markerLayer.addLayer(m);
+  });
+}
+function fitAll(){
+  const pts=mappable().map(p=>[p.lat,p.lng]);
+  if(pts.length) map.fitBounds(pts,{padding:[36,36],maxZoom:14});
+}
+function openSheet(p){
+  $("#sheetbody").innerHTML = `
+    <h3 class="serif">${esc(p.name)}</h3>
+    <p class="meta">${esc(p.cat)} · ${esc(p.hood.split(" / ")[0])} · ${esc(p.arr)}</p>
+    <div class="tags" style="margin-top:8px">${tagsHTML(p)}</div>
+    <p>${esc(p.note)}</p>
+    <div class="actions">
+      <a class="act primary" target="_blank" rel="noopener" href="${mapsSearch(p)}">◍ Google Maps</a>
+      <a class="act" target="_blank" rel="noopener" href="${mapsDir(p)}">→ Directions</a>
+    </div>`;
+  $("#sheet").classList.add("show");
+}
+$("#sheetclose").addEventListener("click",()=>$("#sheet").classList.remove("show"));
+
+function drawRoute(d){
+  if(!mapReady){ initMap(); }
+  clearRoute(true);
+  const stops=d.steps.map(s=>s.pid?byId(s.pid):null).filter(p=>p&&p.lat!=null);
+  // de-dupe consecutive identical stops (e.g. Sacré-Cœur twice)
+  const uniq=[]; stops.forEach(p=>{ if(!uniq.length||uniq[uniq.length-1].id!==p.id) uniq.push(p); });
+  const latlngs=uniq.map(p=>[p.lat,p.lng]);
+  if(latlngs.length){
+    L.polyline(latlngs,{color:"#7B2D3A",weight:3,opacity:.8,dashArray:"2 6"}).addTo(routeLayer);
+    uniq.forEach((p,i)=>{
+      L.marker([p.lat,p.lng],{icon:L.divIcon({className:"",html:`<div class="route-pin">${i+1}</div>`,iconSize:[26,26],iconAnchor:[13,13]})})
+        .on("click",()=>openSheet(p)).addTo(routeLayer);
+    });
+    markerLayer.clearLayers();
+    map.fitBounds(latlngs,{padding:[50,50],maxZoom:15});
+  }
+  $("#routetitle").textContent="Route · "+d.title;
+  $("#routebanner").classList.add("show");
+}
+function clearRoute(keepBanner){
+  if(routeLayer) routeLayer.clearLayers();
+  if(!keepBanner){ $("#routebanner").classList.remove("show"); renderMarkers(); }
+}
+$("#clearroute").addEventListener("click",()=>{ clearRoute(false); fitAll(); });
+
+/* ============================================================ boot */
+renderQuickFilters(); renderCats(); renderHoods("hoodlist"); renderHoods("hoodlist2");
+renderDaysTeaser(); renderExplore(); renderDays(); renderBefore(); renderLegend();
+</script>
+</body>
+</html>
