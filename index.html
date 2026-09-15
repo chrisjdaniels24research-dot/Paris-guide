@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Paris — a working list</title>
+<meta name="description" content="A friend's Paris guide by neighbourhood — search, map and walking directions.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14493F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Paris">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet">
@@ -187,7 +196,7 @@ img{max-width:100%}
 :root[data-theme="dark"] .grouplabel{color:var(--green-2)}
 
 /* ---------- map ---------- */
-#view-map{position:fixed;inset:0;top:calc(env(safe-area-inset-top,0px));bottom:0;display:none;flex-direction:column;z-index:20}
+#view-map{position:fixed;inset:0;top:calc(env(safe-area-inset-top,0px));bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));display:none;flex-direction:column;z-index:20}
 #view-map.active{display:flex}
 .mapbar{background:var(--paper);border-bottom:1px solid var(--rule-2);padding:8px 0 2px}
 .mapbar .row{display:flex;align-items:center;gap:10px;padding:2px 14px}
@@ -251,6 +260,17 @@ img{max-width:100%}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .navbtn[aria-current="true"]{color:var(--green-2)}}
 :root[data-theme="dark"] .navbtn[aria-current="true"]{color:var(--green-2)}
 
+.nearbtn{margin-top:14px;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;box-shadow:var(--shadow)}
+.nearbtn:hover{border-color:var(--green)}
+.nearbtn[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
+:root[data-theme="dark"] .nearbtn[aria-pressed="true"],
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nearbtn[aria-pressed="true"]{color:#0c1512}}
+.card .dist,#sheet .dist{display:inline-block;font-size:12px;font-weight:700;color:var(--green);letter-spacing:.02em;margin-top:8px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .card .dist,:root:not([data-theme="light"]) #sheet .dist{color:var(--green-2)}}
+:root[data-theme="dark"] .card .dist,:root[data-theme="dark"] #sheet .dist{color:var(--green-2)}
+.maprecenter{position:absolute;right:12px;bottom:16px;z-index:1100;width:46px;height:46px;border-radius:13px;border:1px solid var(--rule);background:var(--card);color:var(--ink);display:grid;place-items:center;font-size:20px;box-shadow:var(--shadow)}
+.maprecenter:hover{border-color:var(--green);color:var(--green)}
+.userdot{width:16px;height:16px;border-radius:50%;background:#2C6BE0;border:3px solid #fff;box-shadow:0 0 0 5px rgba(44,107,224,.22)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:680px){
   .catrow .nm{font-size:19px}
@@ -265,6 +285,7 @@ img{max-width:100%}
   <div class="row">
     <div class="mark">Paris<small>A working list</small></div>
     <div class="sp"></div>
+    <button class="iconbtn" id="btn-share" aria-label="Share this guide">📤</button>
     <button class="iconbtn" id="btn-search" aria-label="Search">🔎</button>
   </div>
 </header>
@@ -281,6 +302,7 @@ img{max-width:100%}
       <button class="clr" id="qclr" aria-label="Clear search">×</button>
     </div>
 
+    <button class="nearbtn" id="btn-near" aria-pressed="false">📍 Near me</button>
     <div class="chiprow" id="quickfilters" role="group" aria-label="Quick filters"></div>
 
     <div id="browse">
@@ -319,6 +341,7 @@ img{max-width:100%}
     <button class="linkbtn" id="clearroute" style="color:inherit">Clear route ×</button>
   </div>
   <div id="map"></div>
+  <button class="maprecenter" id="maprecenter" aria-label="Recenter the map on all of Paris">⤢</button>
   <div id="sheet" role="dialog" aria-label="Place details">
     <button class="sclose" id="sheetclose" aria-label="Close">×</button>
     <div id="sheetbody"></div>
@@ -576,6 +599,13 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const mapsSearch=p=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name.replace(/\s*\(.*?\)/,"")+" Paris")}`;
 const mapsDir=p=>`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.name.replace(/\s*\(.*?\)/,"")+" Paris")}&travelmode=walking`;
 
+let userPos=null, nearActive=false;
+function distKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180,
+  s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));}
+function fmtDist(km){return km<1?Math.round(km*1000)+" m":km.toFixed(km<10?1:0)+" km";}
+function distHTML(p){ if(!userPos||p.lat==null) return ""; return `<span class="dist">📍 ${fmtDist(distKm(userPos,p))} away</span>`; }
+
 function tagsHTML(p){
   let h=`<span class="t ${STATUS_CLASS[p.status]}">${STATUS_LABEL[p.status]}</span>`;
   if(p.book) h+=`<span class="t book">Book ahead</span>`;
@@ -597,6 +627,7 @@ function cardHTML(p){
     <div class="top"><div>${nameHTML}
       <p class="meta">${esc(p.cat)} · ${esc(p.hood.split(" / ")[0])} · ${esc(p.arr)}</p></div></div>
     <div class="tags">${tagsHTML(p)}</div>
+    ${distHTML(p)}
     <p class="note">${esc(p.note)}</p>
     ${actionsHTML(p)}
   </article>`;
@@ -657,10 +688,11 @@ function currentMatches(){
     const t=query.toLowerCase();
     list=list.filter(p=>[p.name,p.cat,p.hood,p.arr,p.note,(p.kw||""),p.tags.join(" ")].join(" ").toLowerCase().includes(t));
   }
+  if(nearActive && userPos){ return list.filter(p=>p.lat!=null).sort((a,b)=>distKm(userPos,a)-distKm(userPos,b)); }
   return list.sort(sortPlaces);
 }
 function renderExplore(){
-  const active = activeFilters.size>0 || query.trim().length>0;
+  const active = activeFilters.size>0 || query.trim().length>0 || nearActive;
   $("#browse").hidden = active;
   $("#results").hidden = !active;
   if(active){
@@ -673,6 +705,7 @@ $("#q").addEventListener("input",e=>{ query=e.target.value; $("#qclr").classList
 $("#qclr").addEventListener("click",()=>{ query=""; $("#q").value=""; $("#qclr").classList.remove("show"); renderExplore(); $("#q").focus(); });
 $("#clearall").addEventListener("click",()=>{
   activeFilters.clear(); query=""; $("#q").value=""; $("#qclr").classList.remove("show");
+  nearActive=false; $("#btn-near").setAttribute("aria-pressed","false");
   $$("#quickfilters .chip").forEach(c=>c.setAttribute("aria-pressed","false")); renderExplore();
 });
 
@@ -771,7 +804,12 @@ function initMap(){
   renderMapFilters();
   renderMarkers();
   fitAll();
+  if(userPos) showUser();
 }
+let userMarker=null;
+function showUser(){ if(!mapReady||!userPos) return; if(userMarker){ userMarker.remove(); }
+  userMarker=L.marker([userPos.lat,userPos.lng],{icon:L.divIcon({className:"",html:'<div class="userdot"></div>',iconSize:[16,16],iconAnchor:[8,8]}),interactive:false,keyboard:false}).addTo(map); }
+function recenter(){ if(!mapReady) return; const pts=mappable().map(p=>[p.lat,p.lng]); if(userPos) pts.push([userPos.lat,userPos.lng]); if(pts.length) map.fitBounds(pts,{padding:[40,40],maxZoom:14}); }
 function mappable(){ return PLACES.filter(p=>p.lat!=null&&p.lng!=null); }
 let mapCats=new Set(); // empty = all
 function renderMapFilters(){
@@ -810,6 +848,7 @@ function openSheet(p){
     <h3 class="serif">${esc(p.name)}</h3>
     <p class="meta">${esc(p.cat)} · ${esc(p.hood.split(" / ")[0])} · ${esc(p.arr)}</p>
     <div class="tags" style="margin-top:8px">${tagsHTML(p)}</div>
+    ${distHTML(p)}
     <p>${esc(p.note)}</p>
     <div class="actions">
       <a class="act primary" target="_blank" rel="noopener" href="${mapsSearch(p)}">◍ Google Maps</a>
@@ -843,6 +882,28 @@ function clearRoute(keepBanner){
   if(!keepBanner){ $("#routebanner").classList.remove("show"); renderMarkers(); }
 }
 $("#clearroute").addEventListener("click",()=>{ clearRoute(false); fitAll(); });
+
+/* ============================================================ near me · share · recenter */
+$("#btn-near").addEventListener("click",()=>{
+  const b=$("#btn-near");
+  if(nearActive){ nearActive=false; b.setAttribute("aria-pressed","false"); renderExplore(); return; }
+  if(!navigator.geolocation){ alert("Location isn't available on this device."); return; }
+  b.textContent="📍 Locating…";
+  navigator.geolocation.getCurrentPosition(pos=>{
+    userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    nearActive=true; b.setAttribute("aria-pressed","true"); b.textContent="📍 Near me";
+    renderExplore(); showUser();
+  },()=>{ b.textContent="📍 Near me"; alert("Couldn't get your location. You can still browse and search."); },
+  {enableHighAccuracy:true,timeout:9000,maximumAge:60000});
+});
+$("#btn-share").addEventListener("click",async()=>{
+  const url=location.href.split("#")[0], b=$("#btn-share");
+  try{ if(navigator.share){ await navigator.share({title:"Paris — a working list",text:"A Paris guide by neighbourhood",url}); return; } }
+  catch(e){ if(e && e.name==="AbortError") return; }
+  try{ await navigator.clipboard.writeText(url); const t=b.textContent; b.textContent="✓"; setTimeout(()=>{b.textContent=t;},1200); }
+  catch(e){ prompt("Copy this link:",url); }
+});
+$("#maprecenter").addEventListener("click",()=>recenter());
 
 /* ============================================================ boot */
 renderQuickFilters(); renderCats(); renderHoods("hoodlist"); renderHoods("hoodlist2");
