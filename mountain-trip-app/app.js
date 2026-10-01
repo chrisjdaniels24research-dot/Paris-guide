@@ -93,3 +93,142 @@ qs("#profileBtn").onclick=function(){qs("#profileName").value=S.profile==="You"?
 qs("#compareBtn").onclick=function(){var items=DESTS.filter(function(d){return S.saved.includes(d.id)});qs("#compareContent").innerHTML=items.length?'<div class="compare-table" style="--cols:'+items.length+'">'+[["Destination"].concat(items.map(function(d){return d.name})),["Airport"].concat(items.map(function(d){return d.airport+" · "+d.drive})),["Snow"].concat(items.map(function(d){return word(d.snow)})),["Fishing"].concat(items.map(function(d){return word(d.fishing)})),["Nightlife"].concat(items.map(function(d){return word(d.nightlife)})),["Cabin fit"].concat(items.map(function(d){return word(d.cabins)})),["Best window"].concat(items.map(function(d){return d.best}))].map(function(r){return '<div class="compare-row"><b>'+r[0]+'</b>'+r.slice(1).map(function(x){return '<span>'+x+'</span>'}).join("")+'</div>'}).join("")+'</div>':'<p class="muted">Save two or more destinations to compare them here.</p>';openSheet("compareSheet")};
 function renderAll(){renderDestinations((qs(".filter.active")||{}).dataset?qs(".filter.active").dataset.filter:"all");renderGroup();renderTrip();qs("#profileBtn").textContent=initials(S.profile)}
 renderAll();if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(function(){});
+
+
+/* ---- richer group-planning UX enhancements ---- */
+S.board=S.board||[];
+S.availability=S.availability||{};
+S.calendarMonth=Number.isInteger(S.calendarMonth)?S.calendarMonth:9;
+
+function imageSearch(q){return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(q)}
+function redditSearch(q){return "https://www.google.com/search?q="+encodeURIComponent("site:reddit.com "+q)}
+function galleryHtml(d){
+  var cards=[
+    ["Mountain views",d.name+" "+d.range+" mountains"],
+    ["Town & nightlife",d.name+" downtown nightlife"],
+    ["Cabins & chalets",d.name+" mountain cabin chalet"],
+    ["Skiing",d.name+" ski resort winter"],
+    ["Fishing",d.name+" fly fishing river"],
+    ["Best things to do",d.name+" best things to do"]
+  ];
+  return '<h3>Photos & inspiration</h3><div class="photo-link-grid">'+cards.map(function(c,i){
+    return '<a class="photo-link-card" target="_blank" rel="noopener" href="'+imageSearch(c[1])+'" style="background-image:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.72)),url(\''+d.photo+'&crop='+(i%2?"entropy":"center")+'\')"><b>'+c[0]+'</b><span>Open gallery ↗</span></a>'
+  }).join("")+'</div>';
+}
+function deepLinksHtml(d){
+  var cards=[
+    ["Official tourism",gs(d.name+" "+d.state+" official tourism")],
+    ["Reddit trip reports",redditSearch(d.name+" trip recommendations")],
+    ["Live webcams",gs(d.name+" live webcams ski mountain")],
+    ["Events calendar",gs(d.name+" "+d.state+" events calendar 2026")],
+    ["Weather & snow",gs(d.name+" weather snow report")],
+    ["Fly fishing guides",gs(d.name+" fly fishing guides")],
+    ["Ski resorts",gs(d.name+" ski resorts tickets")],
+    ["Hot springs / spas",gs(d.name+" hot springs spa")],
+    ["Google Maps",gm(d.name+" "+d.state)]
+  ];
+  return '<h3>Plan deeper</h3><div class="link-grid">'+cards.map(function(c){return '<a class="link-card" target="_blank" rel="noopener" href="'+c[1]+'"><b>'+c[0]+'</b><span>Open ↗</span></a>'}).join("")+'</div>'
+}
+function fachableLeaderFor(d){
+  var best=null,bestCount=-1;
+  (S.housing[d.id]||[]).forEach(function(h){
+    var c=Object.values(S.housingVotes[houseKey(d.id,h.url)]||{}).filter(Boolean).length;
+    if(c>bestCount){best={h:h,count:c};bestCount=c}
+  });
+  return best;
+}
+function fachableHtml(d){
+  var leader=fachableLeaderFor(d);
+  if(leader&&leader.count>0){
+    return '<div class="fachable-spotlight"><div class="trophy">🏆</div><div><div class="eyebrow">MOST FACHABLE CHALET</div><h3>'+esc(leader.h.name)+'</h3><p>'+leader.count+' group vote'+(leader.count===1?"":"s")+' · keep voting below.</p></div></div>';
+  }
+  return '<div class="fachable-spotlight empty"><div class="trophy">🏆</div><div><div class="eyebrow">MOST FACHABLE CHALET</div><h3>No winner yet</h3><p>Add Airbnb/chalet options below. Every listing gets a “Most Fachable Chalet” vote button.</p></div></div>';
+}
+
+var _baseOpenDetail=window.openDetail;
+window.openDetail=function(id){
+  _baseOpenDetail(id);
+  var d=DESTS.find(function(x){return x.id===id});if(!d)return;
+  var body=qs("#detailContent .detail-body");
+  if(body){
+    var media=document.createElement("div");media.className="detail-extra";media.innerHTML=galleryHtml(d)+fachableHtml(d);
+    var firstHeading=body.querySelector("h3");
+    if(firstHeading)body.insertBefore(media,firstHeading);else body.prepend(media);
+    var deep=document.createElement("div");deep.className="detail-extra";deep.innerHTML=deepLinksHtml(d);
+    var comments=Array.from(body.querySelectorAll("h3")).find(function(h){return h.textContent==="Comments"});
+    if(comments)body.insertBefore(deep,comments);else body.appendChild(deep);
+  }
+};
+
+function renderBoard(){
+  var list=qs("#boardList");if(!list)return;
+  list.innerHTML=S.board.length?S.board.map(function(m){
+    return '<div class="board-message"><div class="face">'+initials(m.name)+'</div><div class="board-bubble"><div><b>'+esc(m.name)+'</b><time>'+new Date(m.ts).toLocaleString()+'</time></div><p>'+esc(m.text)+'</p></div></div>'
+  }).join(""):'<div class="board-empty">No messages yet. Start the group chat.</div>';
+}
+function postBoard(){
+  var inp=qs("#boardInput");if(!inp)return;var t=inp.value.trim();if(!t)return;
+  S.board.unshift({name:S.profile,text:t,ts:Date.now()});
+  S.activity.unshift({text:S.profile+" posted to the group chat",ts:Date.now()});
+  inp.value="";save();renderGroup();
+}
+if(qs("#postBoard"))qs("#postBoard").onclick=postBoard;
+if(qs("#boardInput"))qs("#boardInput").addEventListener("keydown",function(e){if((e.metaKey||e.ctrlKey)&&e.key==="Enter")postBoard()});
+
+var LONG_WEEKENDS=[
+  {name:"New Year's weekend",start:"2026-01-01",end:"2026-01-04",note:"Thu holiday + Fri bridge day"},
+  {name:"MLK Day",start:"2026-01-17",end:"2026-01-19",note:"3-day weekend"},
+  {name:"Presidents Day",start:"2026-02-14",end:"2026-02-16",note:"3-day weekend"},
+  {name:"Memorial Day",start:"2026-05-23",end:"2026-05-25",note:"3-day weekend"},
+  {name:"Juneteenth",start:"2026-06-19",end:"2026-06-21",note:"Fri holiday · 3-day weekend"},
+  {name:"Independence Day",start:"2026-07-03",end:"2026-07-05",note:"Observed Fri · 3-day weekend"},
+  {name:"Labor Day",start:"2026-09-05",end:"2026-09-07",note:"3-day weekend"},
+  {name:"Indigenous Peoples' / Columbus Day",start:"2026-10-10",end:"2026-10-12",note:"3-day federal holiday weekend"},
+  {name:"Thanksgiving",start:"2026-11-26",end:"2026-11-29",note:"Thu holiday + common Fri off · 4-day window"},
+  {name:"Christmas",start:"2026-12-25",end:"2026-12-27",note:"Fri holiday · 3-day weekend"}
+];
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function dateInRange(key,a,b){return key>=a&&key<=b}
+function longWeekendFor(key){return LONG_WEEKENDS.find(function(w){return dateInRange(key,w.start,w.end)})}
+function renderCalendar(){
+  var grid=qs("#calendarGrid");if(!grid)return;
+  var m=S.calendarMonth,year=2026,first=new Date(year,m,1),days=new Date(year,m+1,0).getDate();
+  qs("#calendarMonthLabel").textContent=first.toLocaleString(undefined,{month:"long",year:"numeric"});
+  var html=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(function(x){return '<div class="cal-dow">'+x+'</div>'}).join("");
+  for(var z=0;z<first.getDay();z++)html+='<div class="cal-day blank"></div>';
+  var mine=S.availability[S.profile]||[];
+  for(var d=1;d<=days;d++){
+    var date=new Date(year,m,d),key=ymd(date),lw=longWeekendFor(key),on=mine.includes(key);
+    var total=Object.values(S.availability).filter(function(arr){return arr.includes(key)}).length;
+    html+='<button class="cal-day '+(lw?"long-weekend ":"")+(on?"available ":"")+'" data-date="'+key+'"><span>'+d+'</span>'+(total?'<em>'+total+' free</em>':'')+(lw?'<i title="'+lw.name+'">★</i>':'')+'</button>';
+  }
+  grid.innerHTML=html;
+  qsa("#calendarGrid [data-date]").forEach(function(b){b.onclick=function(){
+    var key=b.dataset.date;S.availability[S.profile]=S.availability[S.profile]||[];
+    var arr=S.availability[S.profile],i=arr.indexOf(key);if(i>=0)arr.splice(i,1);else arr.push(key);
+    S.activity.unshift({text:S.profile+(i>=0?" removed":" added")+" availability for "+key,ts:Date.now()});
+    save();renderCalendar();renderGroup();
+  }});
+  var nowMonth=m;
+  qs("#longWeekendList").innerHTML='<div class="long-weekend-head">Extended weekends in 2026</div>'+LONG_WEEKENDS.map(function(w){
+    var s=new Date(w.start+"T12:00:00"),e=new Date(w.end+"T12:00:00"),isMonth=s.getMonth()===nowMonth||e.getMonth()===nowMonth;
+    return '<div class="long-weekend-card '+(isMonth?"current":"")+'"><div><b>'+w.name+'</b><span>'+s.toLocaleDateString(undefined,{month:"short",day:"numeric"})+'–'+e.toLocaleDateString(undefined,{month:"short",day:"numeric"})+'</span></div><small>'+w.note+'</small></div>'
+  }).join("");
+}
+if(qs("#prevMonth"))qs("#prevMonth").onclick=function(){S.calendarMonth=(S.calendarMonth+11)%12;save();renderCalendar()};
+if(qs("#nextMonth"))qs("#nextMonth").onclick=function(){S.calendarMonth=(S.calendarMonth+1)%12;save();renderCalendar()};
+
+var _baseRenderGroup=renderGroup;
+renderGroup=function(){
+  _baseRenderGroup();
+  renderBoard();
+  renderCalendar();
+  var awards=qs("#awards");
+  if(awards&&!/Most Fachable Chalet/.test(awards.textContent)){
+    awards.insertAdjacentHTML("afterbegin",'<div class="award-card fachable-award"><div class="icon">🏆</div><h4>Most Fachable Chalet</h4><p>No winner yet — add chalets inside a destination and vote.</p></div>');
+  }
+};
+
+if(qs("#detailHome"))qs("#detailHome").onclick=function(){closeSheets();showView("exploreView")};
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closeSheets()});
+renderGroup();
