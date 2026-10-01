@@ -20,10 +20,10 @@
 <body>
   <div id="app">
     <header class="topbar">
-      <div>
+      <button class="brand-button" data-view="exploreView" aria-label="Go to Explore">
         <div class="eyebrow">GROUP TRIP</div>
         <h1>Mountain Trip</h1>
-      </div>
+      </button>
       <button class="avatar" id="profileBtn" aria-label="Set your name">YOU</button>
     </header>
 
@@ -61,6 +61,10 @@
       </section>
 
       <section class="view" id="mapView">
+        <div class="view-toolbar">
+          <button class="back-action" data-view="exploreView">← Explore</button>
+          <span>Tap any pin for details</span>
+        </div>
         <div class="section-head pad">
           <div>
             <div class="eyebrow">GROUP MAP</div>
@@ -68,10 +72,14 @@
           </div>
         </div>
         <div id="map"></div>
-        <div class="map-legend">Bigger circles = more group interest. Tap a pin for details.</div>
+        <div class="map-legend">Bigger circles = more group interest. You can always return with the Explore button above or the bottom navigation.</div>
       </section>
 
       <section class="view" id="groupView">
+        <div class="view-toolbar">
+          <button class="back-action" data-view="exploreView">← Explore</button>
+          <span>Shared decision board</span>
+        </div>
         <div class="section-head pad">
           <div>
             <div class="eyebrow">THE GROUP</div>
@@ -79,6 +87,7 @@
           </div>
         </div>
         <div id="groupSummary" class="group-summary"></div>
+
         <div class="section-head pad small">
           <div>
             <div class="eyebrow">AWARDS</div>
@@ -86,16 +95,35 @@
           </div>
         </div>
         <div id="awards" class="awards"></div>
+
+        <div class="section-head pad small">
+          <div>
+            <div class="eyebrow">COMMENT BOARD</div>
+            <h3>Talk it out</h3>
+          </div>
+        </div>
+        <div class="comment-board">
+          <div class="board-compose">
+            <textarea id="boardInput" rows="3" placeholder="Drop a thought for everyone — dates, a chalet, a destination, whatever..."></textarea>
+            <button class="primary" id="postBoard">Post to board</button>
+          </div>
+          <div id="boardList" class="board-list"></div>
+        </div>
+
         <div class="section-head pad small">
           <div>
             <div class="eyebrow">RECENT ACTIVITY</div>
-            <h3>Comments & votes</h3>
+            <h3>Votes & changes</h3>
           </div>
         </div>
         <div id="activityFeed" class="activity-feed"></div>
       </section>
 
       <section class="view" id="tripView">
+        <div class="view-toolbar">
+          <button class="back-action" data-view="exploreView">← Explore</button>
+          <span>Trip workspace</span>
+        </div>
         <div class="section-head pad">
           <div>
             <div class="eyebrow">OUR TRIP</div>
@@ -114,6 +142,7 @@
           </label>
           <button class="primary" id="saveTrip">Save trip board</button>
         </div>
+
         <div class="section-head pad small">
           <div>
             <div class="eyebrow">SHORTLISTED HOUSING</div>
@@ -135,7 +164,10 @@
   <div class="sheet-backdrop" id="backdrop"></div>
 
   <aside class="sheet" id="detailSheet" aria-hidden="true">
-    <button class="sheet-close" id="closeDetail">×</button>
+    <div class="sheet-toolbar">
+      <button class="sheet-back" id="closeDetail">← Back</button>
+      <button class="sheet-home" id="detailHome">⌂ Explore</button>
+    </div>
     <div id="detailContent"></div>
   </aside>
 
