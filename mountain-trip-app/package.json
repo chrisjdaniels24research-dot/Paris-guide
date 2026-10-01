@@ -1,0 +1,18 @@
+{
+  "name": "mountain-trip-app",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "serve": "npx serve .",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
+    "serve": "^14.2.4"
+  }
+}

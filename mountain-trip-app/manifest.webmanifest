@@ -1,0 +1,19 @@
+{
+  "name": "Mountain Trip — Group Planner",
+  "short_name": "Mountain Trip",
+  "description": "An iPhone-first group mountain trip planner.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#08110d",
+  "theme_color": "#08110d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
