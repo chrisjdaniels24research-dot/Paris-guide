@@ -93,3 +93,486 @@ qs("#profileBtn").onclick=function(){qs("#profileName").value=S.profile==="You"?
 qs("#compareBtn").onclick=function(){var items=DESTS.filter(function(d){return S.saved.includes(d.id)});qs("#compareContent").innerHTML=items.length?'<div class="compare-table" style="--cols:'+items.length+'">'+[["Destination"].concat(items.map(function(d){return d.name})),["Airport"].concat(items.map(function(d){return d.airport+" · "+d.drive})),["Snow"].concat(items.map(function(d){return word(d.snow)})),["Fishing"].concat(items.map(function(d){return word(d.fishing)})),["Nightlife"].concat(items.map(function(d){return word(d.nightlife)})),["Cabin fit"].concat(items.map(function(d){return word(d.cabins)})),["Best window"].concat(items.map(function(d){return d.best}))].map(function(r){return '<div class="compare-row"><b>'+r[0]+'</b>'+r.slice(1).map(function(x){return '<span>'+x+'</span>'}).join("")+'</div>'}).join("")+'</div>':'<p class="muted">Save two or more destinations to compare them here.</p>';openSheet("compareSheet")};
 function renderAll(){renderDestinations((qs(".filter.active")||{}).dataset?qs(".filter.active").dataset.filter:"all");renderGroup();renderTrip();qs("#profileBtn").textContent=initials(S.profile)}
 renderAll();if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(function(){});
+
+
+/* ---- richer group-planning UX enhancements ---- */
+S.board=S.board||[];
+S.availability=S.availability||{};
+S.calendarMonth=Number.isInteger(S.calendarMonth)?S.calendarMonth:9;
+
+function imageSearch(q){return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(q)}
+function redditSearch(q){return "https://www.google.com/search?q="+encodeURIComponent("site:reddit.com "+q)}
+function galleryHtml(d){
+  var cards=[
+    ["Mountain views",d.name+" "+d.range+" mountains"],
+    ["Town & nightlife",d.name+" downtown nightlife"],
+    ["Cabins & chalets",d.name+" mountain cabin chalet"],
+    ["Skiing",d.name+" ski resort winter"],
+    ["Fishing",d.name+" fly fishing river"],
+    ["Best things to do",d.name+" best things to do"]
+  ];
+  return '<h3>Photos & inspiration</h3><div class="photo-link-grid">'+cards.map(function(c,i){
+    return '<a class="photo-link-card" target="_blank" rel="noopener" href="'+imageSearch(c[1])+'" style="background-image:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.72)),url(\''+d.photo+'&crop='+(i%2?"entropy":"center")+'\')"><b>'+c[0]+'</b><span>Open gallery ↗</span></a>'
+  }).join("")+'</div>';
+}
+function deepLinksHtml(d){
+  var cards=[
+    ["Official tourism",gs(d.name+" "+d.state+" official tourism")],
+    ["Reddit trip reports",redditSearch(d.name+" trip recommendations")],
+    ["Live webcams",gs(d.name+" live webcams ski mountain")],
+    ["Events calendar",gs(d.name+" "+d.state+" events calendar 2026")],
+    ["Weather & snow",gs(d.name+" weather snow report")],
+    ["Fly fishing guides",gs(d.name+" fly fishing guides")],
+    ["Ski resorts",gs(d.name+" ski resorts tickets")],
+    ["Hot springs / spas",gs(d.name+" hot springs spa")],
+    ["Google Maps",gm(d.name+" "+d.state)]
+  ];
+  return '<h3>Plan deeper</h3><div class="link-grid">'+cards.map(function(c){return '<a class="link-card" target="_blank" rel="noopener" href="'+c[1]+'"><b>'+c[0]+'</b><span>Open ↗</span></a>'}).join("")+'</div>'
+}
+function fachableLeaderFor(d){
+  var best=null,bestCount=-1;
+  (S.housing[d.id]||[]).forEach(function(h){
+    var c=Object.values(S.housingVotes[houseKey(d.id,h.url)]||{}).filter(Boolean).length;
+    if(c>bestCount){best={h:h,count:c};bestCount=c}
+  });
+  return best;
+}
+function fachableHtml(d){
+  var leader=fachableLeaderFor(d);
+  if(leader&&leader.count>0){
+    return '<div class="fachable-spotlight"><div class="trophy">🏆</div><div><div class="eyebrow">MOST FACHABLE CHALET</div><h3>'+esc(leader.h.name)+'</h3><p>'+leader.count+' group vote'+(leader.count===1?"":"s")+' · keep voting below.</p></div></div>';
+  }
+  return '<div class="fachable-spotlight empty"><div class="trophy">🏆</div><div><div class="eyebrow">MOST FACHABLE CHALET</div><h3>No winner yet</h3><p>Add Airbnb/chalet options below. Every listing gets a “Most Fachable Chalet” vote button.</p></div></div>';
+}
+
+var _baseOpenDetail=window.openDetail;
+window.openDetail=function(id){
+  _baseOpenDetail(id);
+  var d=DESTS.find(function(x){return x.id===id});if(!d)return;
+  var body=qs("#detailContent .detail-body");
+  if(body){
+    var media=document.createElement("div");media.className="detail-extra";media.innerHTML=galleryHtml(d)+fachableHtml(d);
+    var firstHeading=body.querySelector("h3");
+    if(firstHeading)body.insertBefore(media,firstHeading);else body.prepend(media);
+    var deep=document.createElement("div");deep.className="detail-extra";deep.innerHTML=deepLinksHtml(d);
+    var comments=Array.from(body.querySelectorAll("h3")).find(function(h){return h.textContent==="Comments"});
+    if(comments)body.insertBefore(deep,comments);else body.appendChild(deep);
+  }
+};
+
+function renderBoard(){
+  var list=qs("#boardList");if(!list)return;
+  list.innerHTML=S.board.length?S.board.map(function(m){
+    return '<div class="board-message"><div class="face">'+initials(m.name)+'</div><div class="board-bubble"><div><b>'+esc(m.name)+'</b><time>'+new Date(m.ts).toLocaleString()+'</time></div><p>'+esc(m.text)+'</p></div></div>'
+  }).join(""):'<div class="board-empty">No messages yet. Start the group chat.</div>';
+}
+function postBoard(){
+  var inp=qs("#boardInput");if(!inp)return;var t=inp.value.trim();if(!t)return;
+  S.board.unshift({name:S.profile,text:t,ts:Date.now()});
+  S.activity.unshift({text:S.profile+" posted to the group chat",ts:Date.now()});
+  inp.value="";save();renderGroup();
+}
+if(qs("#postBoard"))qs("#postBoard").onclick=postBoard;
+if(qs("#boardInput"))qs("#boardInput").addEventListener("keydown",function(e){if((e.metaKey||e.ctrlKey)&&e.key==="Enter")postBoard()});
+
+var LONG_WEEKENDS=[
+  {name:"New Year's weekend",start:"2026-01-01",end:"2026-01-04",note:"Thu holiday + Fri bridge day"},
+  {name:"MLK Day",start:"2026-01-17",end:"2026-01-19",note:"3-day weekend"},
+  {name:"Presidents Day",start:"2026-02-14",end:"2026-02-16",note:"3-day weekend"},
+  {name:"Memorial Day",start:"2026-05-23",end:"2026-05-25",note:"3-day weekend"},
+  {name:"Juneteenth",start:"2026-06-19",end:"2026-06-21",note:"Fri holiday · 3-day weekend"},
+  {name:"Independence Day",start:"2026-07-03",end:"2026-07-05",note:"Observed Fri · 3-day weekend"},
+  {name:"Labor Day",start:"2026-09-05",end:"2026-09-07",note:"3-day weekend"},
+  {name:"Indigenous Peoples' / Columbus Day",start:"2026-10-10",end:"2026-10-12",note:"3-day federal holiday weekend"},
+  {name:"Thanksgiving",start:"2026-11-26",end:"2026-11-29",note:"Thu holiday + common Fri off · 4-day window"},
+  {name:"Christmas",start:"2026-12-25",end:"2026-12-27",note:"Fri holiday · 3-day weekend"}
+];
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function dateInRange(key,a,b){return key>=a&&key<=b}
+function longWeekendFor(key){return LONG_WEEKENDS.find(function(w){return dateInRange(key,w.start,w.end)})}
+function renderCalendar(){
+  var grid=qs("#calendarGrid");if(!grid)return;
+  var m=S.calendarMonth,year=2026,first=new Date(year,m,1),days=new Date(year,m+1,0).getDate();
+  qs("#calendarMonthLabel").textContent=first.toLocaleString(undefined,{month:"long",year:"numeric"});
+  var html=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(function(x){return '<div class="cal-dow">'+x+'</div>'}).join("");
+  for(var z=0;z<first.getDay();z++)html+='<div class="cal-day blank"></div>';
+  var mine=S.availability[S.profile]||[];
+  for(var d=1;d<=days;d++){
+    var date=new Date(year,m,d),key=ymd(date),lw=longWeekendFor(key),on=mine.includes(key);
+    var total=Object.values(S.availability).filter(function(arr){return arr.includes(key)}).length;
+    html+='<button class="cal-day '+(lw?"long-weekend ":"")+(on?"available ":"")+'" data-date="'+key+'"><span>'+d+'</span>'+(total?'<em>'+total+' free</em>':'')+(lw?'<i title="'+lw.name+'">★</i>':'')+'</button>';
+  }
+  grid.innerHTML=html;
+  qsa("#calendarGrid [data-date]").forEach(function(b){b.onclick=function(){
+    var key=b.dataset.date;S.availability[S.profile]=S.availability[S.profile]||[];
+    var arr=S.availability[S.profile],i=arr.indexOf(key);if(i>=0)arr.splice(i,1);else arr.push(key);
+    S.activity.unshift({text:S.profile+(i>=0?" removed":" added")+" availability for "+key,ts:Date.now()});
+    save();renderCalendar();renderGroup();
+  }});
+  var nowMonth=m;
+  qs("#longWeekendList").innerHTML='<div class="long-weekend-head">Extended weekends in 2026</div>'+LONG_WEEKENDS.map(function(w){
+    var s=new Date(w.start+"T12:00:00"),e=new Date(w.end+"T12:00:00"),isMonth=s.getMonth()===nowMonth||e.getMonth()===nowMonth;
+    return '<div class="long-weekend-card '+(isMonth?"current":"")+'"><div><b>'+w.name+'</b><span>'+s.toLocaleDateString(undefined,{month:"short",day:"numeric"})+'–'+e.toLocaleDateString(undefined,{month:"short",day:"numeric"})+'</span></div><small>'+w.note+'</small></div>'
+  }).join("");
+}
+if(qs("#prevMonth"))qs("#prevMonth").onclick=function(){S.calendarMonth=(S.calendarMonth+11)%12;save();renderCalendar()};
+if(qs("#nextMonth"))qs("#nextMonth").onclick=function(){S.calendarMonth=(S.calendarMonth+1)%12;save();renderCalendar()};
+
+var _baseRenderGroup=renderGroup;
+renderGroup=function(){
+  _baseRenderGroup();
+  renderBoard();
+  renderCalendar();
+  var awards=qs("#awards");
+  if(awards&&!/Most Fachable Chalet/.test(awards.textContent)){
+    awards.insertAdjacentHTML("afterbegin",'<div class="award-card fachable-award"><div class="icon">🏆</div><h4>Most Fachable Chalet</h4><p>No winner yet — add chalets inside a destination and vote.</p></div>');
+  }
+};
+
+if(qs("#detailHome"))qs("#detailHome").onclick=function(){closeSheets();showView("exploreView")};
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closeSheets()});
+renderGroup();
+
+
+/* ---- release hardening: rich source content + GitHub-backed shared threads ---- */
+var ISSUE_BY_DEST={jackson:4,parkcity:5,tahoe:6,girdwood:7,bozeman:8,durango:9,hoodriver:10,leavenworth:11,asheville:12,smokies:13,stowe:14,vegas:15};
+
+var RICH={
+jackson:{
+  stay:"Stay in downtown Jackson if you want to walk Town Square, bars and restaurants; Teton Village is the ski-in/ski-out alternative; Wilson is the quieter Teton Pass option.",
+  bars:["Million Dollar Cowboy Bar","Snake River Brewing","The Bird","Bin22","Mangy Moose"],
+  food:["Snake River Grill","Wild Sage","Pinky G's Pizzeria","The Bunnery"],
+  do:["JHMR tram to Rendezvous summit","Snake River float or whitewater","Taggart & Bradley Lakes","Teton Park Road ski / skate","National Elk Refuge sleigh ride","Cascade Canyon via Jenny Lake","Snow King gondola & Cowboy Coaster"],
+  fish:["Snake River — native fine-spotted cutthroat","South Fork of the Snake","Flat Creek — trophy cutthroat Aug 1–Oct 31","Gros Ventre River"],
+  ski:["Jackson Hole Mountain Resort — 4,139 ft vertical","Grand Targhee — powder-heavy western slope","Snow King — walkable town hill"],
+  watch:"Highest-cost option on the list; November and late April–May can be shoulder-season quiet."
+},
+parkcity:{
+  stay:"Old Town is the easiest group base: Main Street, Town Lift and free buses. Canyons Village and Deer Valley have deep condo inventory; SLC is the lower-cost alternative.",
+  bars:["No Name Saloon","High West Saloon","The Spur Bar & Grill","Boneyard Saloon & Wine Dive","Downstairs"],
+  food:["Riverhorse on Main","Handle","High West Saloon","Collie's Sports Bar & Grill"],
+  do:["Snowbird tram to Hidden Peak","Alta–Snowbird combo day","Main Street bar crawl","Utah Olympic Park","Cecret Lake / Albion Basin","Park City mountain biking","Strawberry Reservoir ice fishing"],
+  fish:["Middle Provo — year-round tailwater","Weber River","Lower Provo","Strawberry Reservoir"],
+  ski:["Park City Mountain — 7,300 acres","Snowbird — steep, deep, long season","Alta — skiers only, classic powder"],
+  watch:"Little Cottonwood powder mornings can turn a 45-minute drive into two hours; SR-210 can close for avalanche control."
+},
+tahoe:{
+  stay:"Truckee is the best all-around base. Tahoe City is the lakefront alternative; Incline Village puts you close to Mt. Rose. Pick one shore and avoid driving the whole lake.",
+  bars:["Moody's Bistro Bar & Beats","FiftyFifty Brewing Co.","Alibi Ale Works","Bar of America","Truckee Tavern & Grill"],
+  food:["Trokay","Stella","Casa Baeza","Burger Me"],
+  do:["Palisades aerial tram to High Camp","Emerald Bay & Vikingsholm","Mt. Rose Highway overlook","Tahoe Meadows snowshoe / ski","Downtown Truckee brewery crawl","Stateline casinos","Flume Trail MTB","Kayak / SUP Lake Tahoe"],
+  fish:["Truckee River — wild rainbows and browns","Little Truckee tailwater","Pyramid Lake — Lahontan cutthroat","Lake Tahoe charters"],
+  ski:["Palisades Tahoe","Northstar California","Heavenly"],
+  watch:"Weekend Bay Area traffic and I-80 storm closures can wreck schedules; choose one shore and stay disciplined."
+},
+girdwood:{
+  stay:"Girdwood is the mountain base; Anchorage is better for a bigger bar night; Cooper Landing is the fishing-first alternative on the Kenai.",
+  bars:["Girdwood Brewing Company","Sitzmark Bar & Grill","Chair 5","Double Musky Inn bar","Aurora Bar at Hotel Alyeska"],
+  food:["Jack Sprat","Double Musky Inn","Chair 5","Seven Glaciers"],
+  do:["Alyeska Aerial Tram","Kenai River float trip","Russian River sockeye fishing","Heli- or cat-skiing","Alaska Railroad","Whittier tunnel & Prince William Sound","Eklutna Lake"],
+  fish:["Upper Kenai River — trophy wild rainbows","Russian River / Kenai confluence","Bird Creek coho","Ship Creek in Anchorage"],
+  ski:["Alyeska Resort","Arctic Valley","Hilltop"],
+  watch:"Coastal weather is volatile: rain at the base and avalanche-control closures on the Seward Highway are real trip risks."
+},
+bozeman:{
+  stay:"Downtown Bozeman is the easiest social base. Bridger Canyon is the cabin play; Big Sky is the ski-in/ski-out resort alternative.",
+  bars:["Rocking R Bar","The Crystal Bar","Bar IX","The Molly Brown","Bridger Brewing"],
+  food:["Montana Ale Works","Open Range","Plonk","Bridger Brewing"],
+  do:["Float the Madison or Yellowstone","Bridger Bowl ridge laps","Big Sky Lone Peak tram","Chico Hot Springs","Norris Hot Springs","Yellowstone Lamar Valley wildlife drive","Hyalite Canyon","Sacagawea Peak hike"],
+  fish:["Madison River","Gallatin River","Yellowstone River","East Gallatin River"],
+  ski:["Bridger Bowl — locals' nonprofit hill","Big Sky Resort — 5,850 acres"],
+  watch:"Bozeman is much pricier than it used to be, and US-191 to Big Sky can be slow and icy in storms."
+},
+durango:{
+  stay:"Base downtown if you want Main Avenue on foot. Cabins up the Animas Valley trade walkability for scenery. Telluride and Ouray are excellent side-trip bases.",
+  bars:["Diamond Belle Saloon","Steamworks Brewing","Ska Brewing","El Moro Spirits & Tavern","Animas Brewing"],
+  food:["El Moro Spirits & Tavern","Carver Brewing Co.","Steamworks Brewing","The Bookcase & Barber"],
+  do:["Durango & Silverton Narrow Gauge Railroad","Million Dollar Highway","Ouray Hot Springs","Ouray Ice Park","Silverton Mountain guided day","Drift the San Juan","Fall aspen drives","Jeep the Alpine Loop"],
+  fish:["San Juan River quality waters","Animas River through town","Dolores River","Piedra River"],
+  ski:["Purgatory Resort","Silverton Mountain","Telluride Ski Resort"],
+  watch:"DRO has limited nonstop service, and winter storms can close US-550's high passes with little warning."
+},
+hoodriver:{
+  stay:"Hood River gives you walkable taprooms and restaurants. Government Camp is the ski-village choice; Welches / Rhododendron is forest-cabin country.",
+  bars:["pFriem Family Brewers","Double Mountain Brewery & Cidery","Full Sail Brew Pub","Ferment Brewing Company","Working Hands Fermentation"],
+  food:["Solstice Wood Fire Pizza","Celilo Restaurant & Bar","Broder Øst","Lake Taco"],
+  do:["Ski Timberline / Meadows / Skibowl","Palmer Snowfield summer skiing","Columbia Gorge waterfalls","Hood River brewery crawl","Fruit Loop","Lower Deschutes fishing","Deschutes rafting","Windsurf / kiteboard the Gorge"],
+  fish:["Lower Deschutes — wild redsides","Sandy River winter steelhead","Hood River steelhead / salmon","Lost Lake"],
+  ski:["Timberline Lodge & Ski Area","Mt. Hood Meadows","Mt. Hood Skibowl"],
+  watch:"Natural-snow dependence matters; low-snow years can delay openings and shorten the season."
+},
+leavenworth:{
+  stay:"Downtown Leavenworth is the walkable beer-hall base. Icicle Road and Lake Wenatchee have the big-cabin inventory; Snoqualmie Pass is the ski-in alternative.",
+  bars:["München Haus","Icicle Brewing","Blewett Brewing","Doghaus Brewery","Stein"],
+  food:["Andreas Keller","Mozart's","Rhein Haus","Visconti's"],
+  do:["Ski Stevens Pass","Night ski Snoqualmie","Enchantments / Colchuck Lake","Float the Yakima","Leavenworth beer-hall night","Snoqualmie Falls","Rattlesnake Ledge / Mount Si","Icicle Canyon climbing"],
+  fish:["Upper Yakima River","Wenatchee River","Icicle Creek","Middle Fork Snoqualmie"],
+  ski:["Stevens Pass","Mission Ridge","The Summit at Snoqualmie"],
+  watch:"Oktoberfest and Christmastown weekends are packed and expensive; US-2 and I-90 can close for hours in storms."
+},
+asheville:{
+  stay:"Downtown / South Slope is the walkable brewery base. Black Mountain and Brevard are the cabin-and-trout alternatives.",
+  bars:["Burial Beer Co.","Wicked Weed Brewpub","Highland Brewing","Green Man Brewery","Sierra Nevada Mills River"],
+  food:["Cúrate","Chai Pani","Burial Forestry Camp","Wicked Weed Brewpub"],
+  do:["Blue Ridge Parkway to Mount Mitchell","South Slope brewery crawl","Sierra Nevada Mills River","Looking Glass Rock & Falls","Delayed Harvest fly fishing","Graveyard Fields","French Broad float","Bent Creek / Pisgah MTB"],
+  fish:["Davidson River","Tuckasegee Delayed Harvest","Nantahala Delayed Harvest","South Mills River"],
+  ski:["Cataloochee Ski Area","Sugar Mountain","Beech Mountain Resort"],
+  watch:"This is a beer / food / fishing trip first. Natural snow is unreliable and the meaningful ski hills are small and far from Asheville."
+},
+smokies:{
+  stay:"Gatlinburg is the walkable strip; Townsend is the quieter cabin base; Cherokee is the trout-water alternative.",
+  bars:["Gatlinburg Brewing Company","Smoky Mountain Brewery","Sugarlands Distilling Co.","Ole Smoky"],
+  food:["The Peddler Steakhouse","The Greenbrier Restaurant","Howard's Restaurant"],
+  do:["Kuwohi tower & Newfound Gap","Alum Cave Trail to Mount Le Conte","Cades Cove","Guided fly fishing","Moonshine tasting crawl","Waterfall hikes","Oconaluftee elk","Little River tubing"],
+  fish:["Little River","Abrams Creek","Oconaluftee River","Cherokee Enterprise Waters"],
+  ski:["Ober Gatlinburg","Cataloochee Ski Area"],
+  watch:"October and holiday traffic can be brutal; the strip is touristy rather than a true ski-town nightlife scene."
+},
+stowe:{
+  stay:"Stowe village is picturesque and walkable in the center, but Mountain Road lodging spreads out. Waterbury is cheaper; Burlington adds a college-city night out.",
+  bars:["The Alchemist Stowe","von Trapp Brewing & Bierhall","The Matterhorn","Doc Ponds","Prohibition Pig (Waterbury)"],
+  food:["Plate","Piecasso","American Flatbread"],
+  do:["Ski Stowe Front Four","Mount Mansfield hike","Craft beer trail","Smugglers' Notch drive","Stowe Recreation Path","Mount Mansfield toll road / gondola","VT-100 foliage drives","Mad River Glen"],
+  fish:["Lamoille River","Little River / Winooski","Mad River","Battenkill"],
+  ski:["Stowe Mountain Resort","Sugarbush","Smugglers' Notch","Mad River Glen"],
+  watch:"Mud season can close high trails, and November stick season is a gray in-between period."
+},
+vegas:{
+  stay:"Stay on the Strip for nightlife, Summerlin / Red Rock for easier mountain access, or Mount Charleston village if you want a quiet pine-forest night.",
+  bars:["Able Baker Brewing","CraftHaus","Tenaya Creek Brewery","Big Dog's Brewing","The Tavern at The Retreat on Charleston Peak"],
+  food:["Canyon Restaurant at The Retreat on Charleston Peak"],
+  do:["Lee Canyon ski day","Charleston Peak via South Loop","Cathedral Rock Trail","Bristlecone pines","Snow play at Foxtail / Lee Meadows","Red Rock Canyon scenic drive","Lake Mead / Willow Beach fishing","Strip & Fremont nightlife"],
+  fish:["Lake Mohave / Willow Beach","Lake Mead","Cold Creek Pond","Las Vegas urban ponds"],
+  ski:["Lee Canyon"],
+  watch:"This is a Vegas trip with a mountain attached: skiing is small, trout rivers are absent, and the mountain has almost no nightlife."
+}
+};
+
+function richList(title,items){
+  return '<div class="rich-block"><h4>'+title+'</h4><div class="rich-chips">'+items.map(function(x){return '<span>'+esc(x)+'</span>'}).join("")+'</div></div>';
+}
+function persistentThreadHtml(d){
+  var n=ISSUE_BY_DEST[d.id];
+  return '<div class="shared-panel destination-thread"><div><div class="eyebrow">PERSISTENT DESTINATION THREAD</div><h4>Shared '+esc(d.name)+' comments</h4><p>Everyone can read the same thread. Open GitHub to post, edit or delete your own comments.</p></div><a class="primary shared-link" target="_blank" rel="noopener" href="https://github.com/chrisjdaniels24research-dot/Paris-guide/issues/'+n+'">Open thread ↗</a></div><div class="shared-comments" id="sharedComments-'+d.id+'"><p class="muted">Loading shared comments…</p></div>';
+}
+function loadSharedComments(d){
+  var el=qs("#sharedComments-"+d.id);if(!el)return;
+  fetch("https://api.github.com/repos/chrisjdaniels24research-dot/Paris-guide/issues/"+ISSUE_BY_DEST[d.id]+"/comments",{headers:{"Accept":"application/vnd.github+json"}})
+    .then(function(r){if(!r.ok)throw new Error("GitHub "+r.status);return r.json()})
+    .then(function(rows){
+      el.innerHTML=rows.length?rows.slice(-12).reverse().map(function(c){return '<div class="comment shared"><b>'+esc(c.user&&c.user.login||"GitHub user")+'</b><p>'+esc(String(c.body||"").slice(0,1200))+'</p><small>'+new Date(c.created_at).toLocaleString()+' · <a target="_blank" rel="noopener" href="'+c.html_url+'">open ↗</a></small></div>'}).join(""):'<p class="muted">No shared comments yet — start the thread.</p>';
+    }).catch(function(){el.innerHTML='<p class="muted">Shared comments could not load right now. The GitHub thread still works.</p>'});
+}
+
+var _richOpenDetail=window.openDetail;
+window.openDetail=function(id){
+  _richOpenDetail(id);
+  var d=DESTS.find(function(x){return x.id===id}),r=RICH[id]; if(!d||!r)return;
+  var body=qs("#detailContent .detail-body");if(!body)return;
+  var anchor=Array.from(body.querySelectorAll("h3")).find(function(h){return h.textContent==="What do you think?"});
+  var panel=document.createElement("div");panel.className="source-rich";
+  panel.innerHTML='<h3>How to do '+esc(d.name)+'</h3><p class="stay-note">'+esc(r.stay)+'</p>'+
+    richList("Bars & breweries",r.bars)+richList("Restaurants",r.food)+richList("Things to do",r.do)+richList("Fishing",r.fish)+richList("Skiing",r.ski)+
+    '<div class="watchout"><b>Watch-out</b><span>'+esc(r.watch)+'</span></div>'+persistentThreadHtml(d);
+  if(anchor)body.insertBefore(panel,anchor);else body.prepend(panel);
+  rebuildLocalComments(d);
+  rebuildHousing(d);
+  loadSharedComments(d);
+};
+
+function rebuildLocalComments(d){
+  var box=qs("#comments");if(!box)return;var comments=S.comments[d.id]||[];
+  box.innerHTML=comments.length?comments.map(function(c,i){return '<div class="comment"><b>'+esc(c.name)+'</b><p>'+esc(c.text)+'</p><small>'+new Date(c.ts).toLocaleString()+'</small>'+(c.name===S.profile?'<div class="item-actions"><button class="danger-mini" data-del-comment="'+i+'">Delete</button></div>':'')+'</div>'}).join(""):'<p class="muted">No quick comments on this device.</p>';
+  qsa("[data-del-comment]").forEach(function(b){b.onclick=function(){var i=Number(b.dataset.delComment);if(!confirm("Delete this local comment?"))return;S.comments[d.id].splice(i,1);save();window.openDetail(d.id)}});
+}
+function rebuildHousing(d){
+  var list=qs("#housingList");if(!list)return;
+  var arr=S.housing[d.id]||[];
+  if(!arr.length)return;
+  qsa("#housingList .housing-card").forEach(function(card,i){
+    if(i===0)return;
+    var idx=i-1;
+    var actions=card.querySelector(".housing-actions");
+    if(actions&&arr[idx])actions.insertAdjacentHTML("beforeend",'<button class="danger-mini" data-del-housing="'+idx+'">Delete</button>');
+  });
+  qsa("[data-del-housing]").forEach(function(b){b.onclick=function(){var i=Number(b.dataset.delHousing);if(!confirm("Remove this housing option?"))return;S.housing[d.id].splice(i,1);save();window.openDetail(d.id);renderTrip()}});
+}
+function renderBoard(){
+  var list=qs("#boardList");if(!list)return;
+  list.innerHTML=S.board.length?S.board.map(function(m,i){
+    return '<div class="board-message"><div class="face">'+initials(m.name)+'</div><div class="board-bubble"><div><b>'+esc(m.name)+'</b><time>'+new Date(m.ts).toLocaleString()+'</time></div><p>'+esc(m.text)+'</p>'+(m.name===S.profile?'<div class="item-actions"><button class="danger-mini" data-del-board="'+i+'">Delete</button></div>':'')+'</div></div>'
+  }).join(""):'<div class="board-empty">No quick notes on this device.</div>';
+  qsa("[data-del-board]").forEach(function(b){b.onclick=function(){var i=Number(b.dataset.delBoard);if(!confirm("Delete this quick note?"))return;S.board.splice(i,1);save();renderBoard()}});
+}
+function availabilityText(){
+  var a=(S.availability[S.profile]||[]).slice().sort();
+  if(!a.length)return S.profile+" has not marked any 2026 availability yet.";
+  return S.profile+" — 2026 mountain-trip availability:\n"+a.map(function(x){var d=new Date(x+"T12:00:00");var lw=longWeekendFor(x);return "• "+d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+(lw?" — "+lw.name:"")}).join("\n");
+}
+if(qs("#copyAvailability"))qs("#copyAvailability").onclick=function(){
+  var t=availabilityText();
+  navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t).then(function(){alert("Availability copied. Paste it into the shared GitHub availability thread.")}).catch(function(){prompt("Copy this availability:",t)}):prompt("Copy this availability:",t);
+};
+
+/* show shared group-chat comments inside the Group page */
+function loadSharedGroupChat(){
+  var board=qs("#boardList");if(!board||qs("#sharedGroupReadback"))return;
+  var wrap=document.createElement("div");wrap.id="sharedGroupReadback";wrap.className="shared-group-readback";wrap.innerHTML='<div class="eyebrow">LATEST SHARED CHAT</div><p class="muted">Loading from GitHub…</p>';
+  board.parentNode.insertBefore(wrap,board);
+  fetch("https://api.github.com/repos/chrisjdaniels24research-dot/Paris-guide/issues/2/comments",{headers:{"Accept":"application/vnd.github+json"}})
+   .then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(rows){
+     wrap.innerHTML='<div class="eyebrow">LATEST SHARED CHAT</div>'+(rows.length?rows.slice(-10).reverse().map(function(c){return '<div class="comment shared"><b>'+esc(c.user&&c.user.login||"GitHub user")+'</b><p>'+esc(String(c.body||"").slice(0,800))+'</p><small><a target="_blank" href="'+c.html_url+'">open / edit / delete ↗</a></small></div>'}).join(""):'<p class="muted">No shared messages yet.</p>');
+   }).catch(function(){wrap.innerHTML='<div class="eyebrow">LATEST SHARED CHAT</div><p class="muted">Could not load GitHub comments. Use Open shared chat above.</p>'});
+}
+var _releaseRenderGroup=renderGroup;
+renderGroup=function(){_releaseRenderGroup();loadSharedGroupChat();};
+
+
+/* ---- real destination photo galleries + final interaction hardening ---- */
+function gallerySearchTerm(d){
+  var q={
+    jackson:"Grand Teton Jackson Wyoming",
+    parkcity:"Park City Utah Wasatch",
+    tahoe:"Lake Tahoe Truckee Sierra Nevada",
+    girdwood:"Girdwood Alaska Alyeska Chugach",
+    bozeman:"Bozeman Montana Bridger Mountains",
+    durango:"Durango Colorado San Juan Mountains",
+    hoodriver:"Hood River Oregon Mount Hood",
+    leavenworth:"Leavenworth Washington Cascades",
+    asheville:"Asheville North Carolina Blue Ridge Mountains",
+    smokies:"Gatlinburg Great Smoky Mountains",
+    stowe:"Stowe Vermont Green Mountains",
+    vegas:"Mount Charleston Nevada Spring Mountains"
+  };
+  return q[d.id]||d.name+" "+d.range;
+}
+galleryHtml=function(d){
+  return '<h3>Photos</h3><div id="commonsGallery-'+d.id+'" class="commons-gallery"><div class="gallery-loading">Loading real destination photos…</div></div><div class="gallery-actions"><a class="text-btn" target="_blank" rel="noopener" href="'+imageSearch(gallerySearchTerm(d))+'">See more photos ↗</a></div>';
+}
+function loadCommonsGallery(d){
+  var el=qs("#commonsGallery-"+d.id);if(!el)return;
+  var url="https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch="+encodeURIComponent(gallerySearchTerm(d))+"&gsrnamespace=6&gsrlimit=10&prop=imageinfo&iiprop=url%7Cmime%7Cextmetadata&iiurlwidth=900&format=json&origin=*";
+  fetch(url).then(function(r){if(!r.ok)throw new Error("commons");return r.json()}).then(function(data){
+    var pages=Object.values(data.query&&data.query.pages||{}).filter(function(p){
+      var ii=p.imageinfo&&p.imageinfo[0];return ii&&ii.thumburl&&/^image\/(jpeg|png|webp)/.test(ii.mime||"");
+    }).slice(0,8);
+    if(!pages.length)throw new Error("empty");
+    el.innerHTML=pages.map(function(p,i){
+      var ii=p.imageinfo[0],title=String(p.title||"").replace(/^File:/,"");
+      return '<a class="commons-photo '+(i===0?"wide":"")+'" target="_blank" rel="noopener" href="'+ii.descriptionurl+'"><img loading="lazy" src="'+ii.thumburl+'" alt="'+esc(title)+'"><span>'+esc(title.replace(/\.[^.]+$/,""))+'</span></a>';
+    }).join("");
+  }).catch(function(){
+    el.innerHTML='<div class="commons-photo wide fallback" style="background-image:url(\''+d.photo+'\')"><span>'+esc(d.name)+'</span></div><p class="muted">Wikimedia gallery unavailable right now. Use “See more photos.”</p>';
+  });
+}
+var _galleryOpen=window.openDetail;
+window.openDetail=function(id){
+  _galleryOpen(id);
+  var d=DESTS.find(function(x){return x.id===id});if(!d)return;
+  loadCommonsGallery(d);
+
+  /* Destination vote buttons toggle off when the active choice is tapped again. */
+  qsa("#detailContent [data-vote]").forEach(function(b){
+    b.onclick=function(){
+      S.votes[d.id]=S.votes[d.id]||{};
+      var next=(S.votes[d.id][S.profile]===b.dataset.vote)?"":b.dataset.vote;
+      if(next)S.votes[d.id][S.profile]=next;else delete S.votes[d.id][S.profile];
+      S.activity.unshift({text:S.profile+(next?" voted "+b.textContent.trim():" cleared a vote")+" on "+d.name,ts:Date.now()});
+      save();window.openDetail(d.id);renderAll();
+    };
+  });
+
+  /* Validate pasted housing URLs and keep arbitrary schemes out of the page. */
+  var add=qs("#saveHousing");
+  if(add)add.onclick=function(){
+    var raw=qs("#hUrl").value.trim(),u;
+    try{u=new URL(raw)}catch(e){alert("Paste a full http(s) listing URL.");return}
+    if(!/^https?:$/.test(u.protocol)){alert("Use an http(s) listing URL.");return}
+    S.housing[d.id]=S.housing[d.id]||[];
+    S.housing[d.id].push({name:qs("#hName").value.trim()||"Group housing option",url:u.href,total:qs("#hTotal").value,people:qs("#hPeople").value,beds:qs("#hBeds").value,note:qs("#hNote").value.trim()});
+    S.activity.unshift({text:S.profile+" added a housing option in "+d.name,ts:Date.now()});
+    save();window.openDetail(d.id);renderTrip();renderGroup();
+  };
+};
+
+function refreshSharedGroupChat(){
+  var old=qs("#sharedGroupReadback");if(old)old.remove();
+  loadSharedGroupChat();
+}
+var groupPanel=qs(".comment-board .shared-panel");
+if(groupPanel&&!qs("#refreshSharedChat")){
+  var rb=document.createElement("button");rb.id="refreshSharedChat";rb.className="secondary";rb.textContent="Refresh";
+  rb.onclick=refreshSharedGroupChat;groupPanel.appendChild(rb);
+}
+
+/* Explicitly label browser-only notes so nobody mistakes them for shared state. */
+var localHead=Array.from(document.querySelectorAll(".detail-body h3")).find(function(h){return h.textContent==="Comments"});
+if(localHead)localHead.textContent="Quick notes on this device";
+
+
+/* ---- final link/readback polish ---- */
+richList=function(title,items){
+  return '<div class="rich-block"><h4>'+title+'</h4><div class="rich-chips">'+items.map(function(x){
+    var mapLike=/Bars|Restaurants/i.test(title);
+    var href=mapLike?gm(x):gs(x+" official");
+    return '<a target="_blank" rel="noopener" href="'+href+'">'+esc(x)+' ↗</a>';
+  }).join("")+'</div></div>';
+}
+function appleMaps(q){return "https://maps.apple.com/?q="+encodeURIComponent(q)}
+var _linkPolishOpen=window.openDetail;
+window.openDetail=function(id){
+  _linkPolishOpen(id);
+  var d=DESTS.find(function(x){return x.id===id});if(!d)return;
+  var body=qs("#detailContent .detail-body");
+  if(body&&!qs("#iosLinks-"+id)){
+    var links=document.createElement("div");links.id="iosLinks-"+id;links.className="ios-quick-links";
+    links.innerHTML='<a class="pill" target="_blank" rel="noopener" href="'+appleMaps(d.name+" "+d.state)+'"> Apple Maps</a>'+
+      '<a class="pill" target="_blank" rel="noopener" href="'+gs("Vrbo "+d.name+" "+d.state)+'">Vrbo ↗</a>'+
+      '<a class="pill" target="_blank" rel="noopener" href="'+gs("hotels "+d.name+" "+d.state)+'">Hotels ↗</a>'+
+      '<a class="pill" target="_blank" rel="noopener" href="'+gs(d.name+" "+d.state+" events 2026")+'">Events ↗</a>';
+    var stats=body.querySelector(".stats");if(stats)stats.insertAdjacentElement("afterend",links);else body.prepend(links);
+  }
+  var h=Array.from(body?body.querySelectorAll("h3"):[]).find(function(x){return x.textContent==="Comments"});
+  if(h)h.textContent="Quick notes on this device";
+};
+
+function loadSharedAvailability(){
+  var host=qs("#longWeekendList");if(!host||qs("#sharedAvailabilityReadback"))return;
+  var el=document.createElement("div");el.id="sharedAvailabilityReadback";el.className="shared-availability-readback";
+  el.innerHTML='<div class="eyebrow">SHARED AVAILABILITY POSTS</div><p class="muted">Loading from GitHub…</p>';
+  host.parentNode.insertBefore(el,host);
+  fetch("https://api.github.com/repos/chrisjdaniels24research-dot/Paris-guide/issues/3/comments",{headers:{"Accept":"application/vnd.github+json"}})
+   .then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(rows){
+     el.innerHTML='<div class="eyebrow">SHARED AVAILABILITY POSTS</div>'+(rows.length?rows.slice(-8).reverse().map(function(c){return '<div class="comment shared"><b>'+esc(c.user&&c.user.login||"GitHub user")+'</b><p>'+esc(String(c.body||"").slice(0,1200))+'</p><small><a target="_blank" rel="noopener" href="'+c.html_url+'">open / edit / delete ↗</a></small></div>'}).join(""):'<p class="muted">No shared availability posts yet.</p>');
+   }).catch(function(){el.innerHTML='<div class="eyebrow">SHARED AVAILABILITY POSTS</div><p class="muted">Could not load posts. Use “Open shared availability” above.</p>'});
+}
+var _availabilityRenderGroup=renderGroup;
+renderGroup=function(){_availabilityRenderGroup();loadSharedAvailability();};
+
+/* ---- share control ---- */
+if(qs("#shareApp"))qs("#shareApp").onclick=function(){
+  var url=location.href.split("#")[0],data={title:"Mountain Trip",text:"Help us pick the mountain trip — vote, check dates, compare chalets and drop comments.",url:url};
+  if(navigator.share){navigator.share(data).catch(function(){})}
+  else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert("App link copied.")})}
+  else prompt("Copy this link:",url);
+};
+
+
+/* ---- empty-state polish ---- */
+var _emptyStateRenderGroup=renderGroup;
+renderGroup=function(){
+  _emptyStateRenderGroup();
+  var positive=DESTS.reduce(function(n,d){return n+likes(d)},0);
+  if(!positive){
+    var first=qs("#awards .award-card");
+    if(first&&/Group favorite/.test(first.textContent)){
+      first.querySelector("h4").textContent="Group voting not started";
+      var p=first.querySelector("p");if(p)p.textContent="Nobody has cast a positive destination vote yet.";
+    }
+    var summary=qs("#groupSummary");
+    if(summary&&!qs("#voteEmptyNote")){
+      summary.insertAdjacentHTML("afterbegin",'<div id="voteEmptyNote" class="empty-note">No destination votes yet. Rankings will become meaningful as the group votes.</div>');
+    }
+  }
+};
+renderGroup();

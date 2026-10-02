@@ -20,11 +20,14 @@
 <body>
   <div id="app">
     <header class="topbar">
-      <div>
+      <button class="brand-button" data-view="exploreView" aria-label="Go to Explore">
         <div class="eyebrow">GROUP TRIP</div>
         <h1>Mountain Trip</h1>
+      </button>
+      <div class="top-actions">
+        <button class="share-btn" id="shareApp" aria-label="Share app">↗ Share</button>
+        <button class="avatar" id="profileBtn" aria-label="Set your name">YOU</button>
       </div>
-      <button class="avatar" id="profileBtn" aria-label="Set your name">YOU</button>
     </header>
 
     <main>
@@ -61,6 +64,10 @@
       </section>
 
       <section class="view" id="mapView">
+        <div class="view-toolbar">
+          <button class="back-action" data-view="exploreView">← Explore</button>
+          <span>Tap any pin for details</span>
+        </div>
         <div class="section-head pad">
           <div>
             <div class="eyebrow">GROUP MAP</div>
@@ -68,10 +75,14 @@
           </div>
         </div>
         <div id="map"></div>
-        <div class="map-legend">Bigger circles = more group interest. Tap a pin for details.</div>
+        <div class="map-legend">Bigger circles = more group interest. You can always return with the Explore button above or the bottom navigation.</div>
       </section>
 
       <section class="view" id="groupView">
+        <div class="view-toolbar">
+          <button class="back-action" data-view="exploreView">← Explore</button>
+          <span>Shared decision board</span>
+        </div>
         <div class="section-head pad">
           <div>
             <div class="eyebrow">THE GROUP</div>
@@ -79,6 +90,7 @@
           </div>
         </div>
         <div id="groupSummary" class="group-summary"></div>
+
         <div class="section-head pad small">
           <div>
             <div class="eyebrow">AWARDS</div>
@@ -86,16 +98,72 @@
           </div>
         </div>
         <div id="awards" class="awards"></div>
+
+        <div class="section-head pad small">
+          <div>
+            <div class="eyebrow">COMMENT BOARD</div>
+            <h3>Talk it out</h3>
+          </div>
+        </div>
+        <div class="comment-board">
+          <div class="shared-panel">
+            <div>
+              <div class="eyebrow">PERSISTENT SHARED CHAT</div>
+              <h4>Everyone sees the same thread</h4>
+              <p>Use the GitHub thread for anything the whole group needs to keep. GitHub handles durable comments, edits and deletes.</p>
+            </div>
+            <a class="primary shared-link" target="_blank" rel="noopener" href="https://github.com/chrisjdaniels24research-dot/Paris-guide/issues/2">Open shared chat ↗</a>
+          </div>
+          <div class="board-compose">
+            <div class="eyebrow">QUICK NOTES ON THIS DEVICE</div>
+            <textarea id="boardInput" rows="3" placeholder="Quick scratch note — for shared/persistent discussion use the button above."></textarea>
+            <button class="secondary" id="postBoard">Save quick note</button>
+          </div>
+          <div id="boardList" class="board-list"></div>
+        </div>
+
+        <div class="section-head pad small">
+          <div>
+            <div class="eyebrow">AVAILABILITY</div>
+            <h3>When can everyone go?</h3>
+          </div>
+        </div>
+        <div class="availability-wrap">
+          <div class="calendar-controls">
+            <button class="secondary" id="prevMonth">←</button>
+            <div>
+              <div class="eyebrow">2026 CALENDAR</div>
+              <strong id="calendarMonthLabel"></strong>
+            </div>
+            <button class="secondary" id="nextMonth">→</button>
+          </div>
+          <p class="muted calendar-help">Tap the dates you’re available. Gold dates mark extended U.S. holiday weekends in 2026. Your taps stay on this device; use “Share availability” below to post the summary to the persistent group thread.</p>
+          <div id="calendarGrid" class="calendar-grid"></div>
+          <div class="calendar-legend">
+            <span><i class="legend-dot mine"></i> Your availability</span>
+            <span><i class="legend-dot long"></i> Extended weekend</span>
+          </div>
+          <div class="calendar-share-actions">
+            <button class="primary" id="copyAvailability">Copy my availability</button>
+            <a class="secondary shared-link" target="_blank" rel="noopener" href="https://github.com/chrisjdaniels24research-dot/Paris-guide/issues/3">Open shared availability ↗</a>
+          </div>
+          <div id="longWeekendList" class="long-weekends"></div>
+        </div>
+
         <div class="section-head pad small">
           <div>
             <div class="eyebrow">RECENT ACTIVITY</div>
-            <h3>Comments & votes</h3>
+            <h3>Votes & changes</h3>
           </div>
         </div>
         <div id="activityFeed" class="activity-feed"></div>
       </section>
 
       <section class="view" id="tripView">
+        <div class="view-toolbar">
+          <button class="back-action" data-view="exploreView">← Explore</button>
+          <span>Trip workspace</span>
+        </div>
         <div class="section-head pad">
           <div>
             <div class="eyebrow">OUR TRIP</div>
@@ -114,6 +182,7 @@
           </label>
           <button class="primary" id="saveTrip">Save trip board</button>
         </div>
+
         <div class="section-head pad small">
           <div>
             <div class="eyebrow">SHORTLISTED HOUSING</div>
@@ -135,7 +204,10 @@
   <div class="sheet-backdrop" id="backdrop"></div>
 
   <aside class="sheet" id="detailSheet" aria-hidden="true">
-    <button class="sheet-close" id="closeDetail">×</button>
+    <div class="sheet-toolbar">
+      <button class="sheet-back" id="closeDetail">← Back</button>
+      <button class="sheet-home" id="detailHome">⌂ Explore</button>
+    </div>
     <div id="detailContent"></div>
   </aside>
 
