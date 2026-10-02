@@ -426,3 +426,85 @@ function loadSharedGroupChat(){
 }
 var _releaseRenderGroup=renderGroup;
 renderGroup=function(){_releaseRenderGroup();loadSharedGroupChat();};
+
+
+/* ---- real destination photo galleries + final interaction hardening ---- */
+function gallerySearchTerm(d){
+  var q={
+    jackson:"Grand Teton Jackson Wyoming",
+    parkcity:"Park City Utah Wasatch",
+    tahoe:"Lake Tahoe Truckee Sierra Nevada",
+    girdwood:"Girdwood Alaska Alyeska Chugach",
+    bozeman:"Bozeman Montana Bridger Mountains",
+    durango:"Durango Colorado San Juan Mountains",
+    hoodriver:"Hood River Oregon Mount Hood",
+    leavenworth:"Leavenworth Washington Cascades",
+    asheville:"Asheville North Carolina Blue Ridge Mountains",
+    smokies:"Gatlinburg Great Smoky Mountains",
+    stowe:"Stowe Vermont Green Mountains",
+    vegas:"Mount Charleston Nevada Spring Mountains"
+  };
+  return q[d.id]||d.name+" "+d.range;
+}
+galleryHtml=function(d){
+  return '<h3>Photos</h3><div id="commonsGallery-'+d.id+'" class="commons-gallery"><div class="gallery-loading">Loading real destination photos…</div></div><div class="gallery-actions"><a class="text-btn" target="_blank" rel="noopener" href="'+imageSearch(gallerySearchTerm(d))+'">See more photos ↗</a></div>';
+}
+function loadCommonsGallery(d){
+  var el=qs("#commonsGallery-"+d.id);if(!el)return;
+  var url="https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch="+encodeURIComponent(gallerySearchTerm(d))+"&gsrnamespace=6&gsrlimit=10&prop=imageinfo&iiprop=url%7Cmime%7Cextmetadata&iiurlwidth=900&format=json&origin=*";
+  fetch(url).then(function(r){if(!r.ok)throw new Error("commons");return r.json()}).then(function(data){
+    var pages=Object.values(data.query&&data.query.pages||{}).filter(function(p){
+      var ii=p.imageinfo&&p.imageinfo[0];return ii&&ii.thumburl&&/^image\/(jpeg|png|webp)/.test(ii.mime||"");
+    }).slice(0,8);
+    if(!pages.length)throw new Error("empty");
+    el.innerHTML=pages.map(function(p,i){
+      var ii=p.imageinfo[0],title=String(p.title||"").replace(/^File:/,"");
+      return '<a class="commons-photo '+(i===0?"wide":"")+'" target="_blank" rel="noopener" href="'+ii.descriptionurl+'"><img loading="lazy" src="'+ii.thumburl+'" alt="'+esc(title)+'"><span>'+esc(title.replace(/\.[^.]+$/,""))+'</span></a>';
+    }).join("");
+  }).catch(function(){
+    el.innerHTML='<div class="commons-photo wide fallback" style="background-image:url(\''+d.photo+'\')"><span>'+esc(d.name)+'</span></div><p class="muted">Wikimedia gallery unavailable right now. Use “See more photos.”</p>';
+  });
+}
+var _galleryOpen=window.openDetail;
+window.openDetail=function(id){
+  _galleryOpen(id);
+  var d=DESTS.find(function(x){return x.id===id});if(!d)return;
+  loadCommonsGallery(d);
+
+  /* Destination vote buttons toggle off when the active choice is tapped again. */
+  qsa("#detailContent [data-vote]").forEach(function(b){
+    b.onclick=function(){
+      S.votes[d.id]=S.votes[d.id]||{};
+      var next=(S.votes[d.id][S.profile]===b.dataset.vote)?"":b.dataset.vote;
+      if(next)S.votes[d.id][S.profile]=next;else delete S.votes[d.id][S.profile];
+      S.activity.unshift({text:S.profile+(next?" voted "+b.textContent.trim():" cleared a vote")+" on "+d.name,ts:Date.now()});
+      save();window.openDetail(d.id);renderAll();
+    };
+  });
+
+  /* Validate pasted housing URLs and keep arbitrary schemes out of the page. */
+  var add=qs("#saveHousing");
+  if(add)add.onclick=function(){
+    var raw=qs("#hUrl").value.trim(),u;
+    try{u=new URL(raw)}catch(e){alert("Paste a full http(s) listing URL.");return}
+    if(!/^https?:$/.test(u.protocol)){alert("Use an http(s) listing URL.");return}
+    S.housing[d.id]=S.housing[d.id]||[];
+    S.housing[d.id].push({name:qs("#hName").value.trim()||"Group housing option",url:u.href,total:qs("#hTotal").value,people:qs("#hPeople").value,beds:qs("#hBeds").value,note:qs("#hNote").value.trim()});
+    S.activity.unshift({text:S.profile+" added a housing option in "+d.name,ts:Date.now()});
+    save();window.openDetail(d.id);renderTrip();renderGroup();
+  };
+};
+
+function refreshSharedGroupChat(){
+  var old=qs("#sharedGroupReadback");if(old)old.remove();
+  loadSharedGroupChat();
+}
+var groupPanel=qs(".comment-board .shared-panel");
+if(groupPanel&&!qs("#refreshSharedChat")){
+  var rb=document.createElement("button");rb.id="refreshSharedChat";rb.className="secondary";rb.textContent="Refresh";
+  rb.onclick=refreshSharedGroupChat;groupPanel.appendChild(rb);
+}
+
+/* Explicitly label browser-only notes so nobody mistakes them for shared state. */
+var localHead=Array.from(document.querySelectorAll(".detail-body h3")).find(function(h){return h.textContent==="Comments"});
+if(localHead)localHead.textContent="Quick notes on this device";
