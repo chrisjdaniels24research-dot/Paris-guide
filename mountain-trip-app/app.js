@@ -232,3 +232,197 @@ renderGroup=function(){
 if(qs("#detailHome"))qs("#detailHome").onclick=function(){closeSheets();showView("exploreView")};
 document.addEventListener("keydown",function(e){if(e.key==="Escape")closeSheets()});
 renderGroup();
+
+
+/* ---- release hardening: rich source content + GitHub-backed shared threads ---- */
+var ISSUE_BY_DEST={jackson:4,parkcity:5,tahoe:6,girdwood:7,bozeman:8,durango:9,hoodriver:10,leavenworth:11,asheville:12,smokies:13,stowe:14,vegas:15};
+
+var RICH={
+jackson:{
+  stay:"Stay in downtown Jackson if you want to walk Town Square, bars and restaurants; Teton Village is the ski-in/ski-out alternative; Wilson is the quieter Teton Pass option.",
+  bars:["Million Dollar Cowboy Bar","Snake River Brewing","The Bird","Bin22","Mangy Moose"],
+  food:["Snake River Grill","Wild Sage","Pinky G's Pizzeria","The Bunnery"],
+  do:["JHMR tram to Rendezvous summit","Snake River float or whitewater","Taggart & Bradley Lakes","Teton Park Road ski / skate","National Elk Refuge sleigh ride","Cascade Canyon via Jenny Lake","Snow King gondola & Cowboy Coaster"],
+  fish:["Snake River — native fine-spotted cutthroat","South Fork of the Snake","Flat Creek — trophy cutthroat Aug 1–Oct 31","Gros Ventre River"],
+  ski:["Jackson Hole Mountain Resort — 4,139 ft vertical","Grand Targhee — powder-heavy western slope","Snow King — walkable town hill"],
+  watch:"Highest-cost option on the list; November and late April–May can be shoulder-season quiet."
+},
+parkcity:{
+  stay:"Old Town is the easiest group base: Main Street, Town Lift and free buses. Canyons Village and Deer Valley have deep condo inventory; SLC is the lower-cost alternative.",
+  bars:["No Name Saloon","High West Saloon","The Spur Bar & Grill","Boneyard Saloon & Wine Dive","Downstairs"],
+  food:["Riverhorse on Main","Handle","High West Saloon","Collie's Sports Bar & Grill"],
+  do:["Snowbird tram to Hidden Peak","Alta–Snowbird combo day","Main Street bar crawl","Utah Olympic Park","Cecret Lake / Albion Basin","Park City mountain biking","Strawberry Reservoir ice fishing"],
+  fish:["Middle Provo — year-round tailwater","Weber River","Lower Provo","Strawberry Reservoir"],
+  ski:["Park City Mountain — 7,300 acres","Snowbird — steep, deep, long season","Alta — skiers only, classic powder"],
+  watch:"Little Cottonwood powder mornings can turn a 45-minute drive into two hours; SR-210 can close for avalanche control."
+},
+tahoe:{
+  stay:"Truckee is the best all-around base. Tahoe City is the lakefront alternative; Incline Village puts you close to Mt. Rose. Pick one shore and avoid driving the whole lake.",
+  bars:["Moody's Bistro Bar & Beats","FiftyFifty Brewing Co.","Alibi Ale Works","Bar of America","Truckee Tavern & Grill"],
+  food:["Trokay","Stella","Casa Baeza","Burger Me"],
+  do:["Palisades aerial tram to High Camp","Emerald Bay & Vikingsholm","Mt. Rose Highway overlook","Tahoe Meadows snowshoe / ski","Downtown Truckee brewery crawl","Stateline casinos","Flume Trail MTB","Kayak / SUP Lake Tahoe"],
+  fish:["Truckee River — wild rainbows and browns","Little Truckee tailwater","Pyramid Lake — Lahontan cutthroat","Lake Tahoe charters"],
+  ski:["Palisades Tahoe","Northstar California","Heavenly"],
+  watch:"Weekend Bay Area traffic and I-80 storm closures can wreck schedules; choose one shore and stay disciplined."
+},
+girdwood:{
+  stay:"Girdwood is the mountain base; Anchorage is better for a bigger bar night; Cooper Landing is the fishing-first alternative on the Kenai.",
+  bars:["Girdwood Brewing Company","Sitzmark Bar & Grill","Chair 5","Double Musky Inn bar","Aurora Bar at Hotel Alyeska"],
+  food:["Jack Sprat","Double Musky Inn","Chair 5","Seven Glaciers"],
+  do:["Alyeska Aerial Tram","Kenai River float trip","Russian River sockeye fishing","Heli- or cat-skiing","Alaska Railroad","Whittier tunnel & Prince William Sound","Eklutna Lake"],
+  fish:["Upper Kenai River — trophy wild rainbows","Russian River / Kenai confluence","Bird Creek coho","Ship Creek in Anchorage"],
+  ski:["Alyeska Resort","Arctic Valley","Hilltop"],
+  watch:"Coastal weather is volatile: rain at the base and avalanche-control closures on the Seward Highway are real trip risks."
+},
+bozeman:{
+  stay:"Downtown Bozeman is the easiest social base. Bridger Canyon is the cabin play; Big Sky is the ski-in/ski-out resort alternative.",
+  bars:["Rocking R Bar","The Crystal Bar","Bar IX","The Molly Brown","Bridger Brewing"],
+  food:["Montana Ale Works","Open Range","Plonk","Bridger Brewing"],
+  do:["Float the Madison or Yellowstone","Bridger Bowl ridge laps","Big Sky Lone Peak tram","Chico Hot Springs","Norris Hot Springs","Yellowstone Lamar Valley wildlife drive","Hyalite Canyon","Sacagawea Peak hike"],
+  fish:["Madison River","Gallatin River","Yellowstone River","East Gallatin River"],
+  ski:["Bridger Bowl — locals' nonprofit hill","Big Sky Resort — 5,850 acres"],
+  watch:"Bozeman is much pricier than it used to be, and US-191 to Big Sky can be slow and icy in storms."
+},
+durango:{
+  stay:"Base downtown if you want Main Avenue on foot. Cabins up the Animas Valley trade walkability for scenery. Telluride and Ouray are excellent side-trip bases.",
+  bars:["Diamond Belle Saloon","Steamworks Brewing","Ska Brewing","El Moro Spirits & Tavern","Animas Brewing"],
+  food:["El Moro Spirits & Tavern","Carver Brewing Co.","Steamworks Brewing","The Bookcase & Barber"],
+  do:["Durango & Silverton Narrow Gauge Railroad","Million Dollar Highway","Ouray Hot Springs","Ouray Ice Park","Silverton Mountain guided day","Drift the San Juan","Fall aspen drives","Jeep the Alpine Loop"],
+  fish:["San Juan River quality waters","Animas River through town","Dolores River","Piedra River"],
+  ski:["Purgatory Resort","Silverton Mountain","Telluride Ski Resort"],
+  watch:"DRO has limited nonstop service, and winter storms can close US-550's high passes with little warning."
+},
+hoodriver:{
+  stay:"Hood River gives you walkable taprooms and restaurants. Government Camp is the ski-village choice; Welches / Rhododendron is forest-cabin country.",
+  bars:["pFriem Family Brewers","Double Mountain Brewery & Cidery","Full Sail Brew Pub","Ferment Brewing Company","Working Hands Fermentation"],
+  food:["Solstice Wood Fire Pizza","Celilo Restaurant & Bar","Broder Øst","Lake Taco"],
+  do:["Ski Timberline / Meadows / Skibowl","Palmer Snowfield summer skiing","Columbia Gorge waterfalls","Hood River brewery crawl","Fruit Loop","Lower Deschutes fishing","Deschutes rafting","Windsurf / kiteboard the Gorge"],
+  fish:["Lower Deschutes — wild redsides","Sandy River winter steelhead","Hood River steelhead / salmon","Lost Lake"],
+  ski:["Timberline Lodge & Ski Area","Mt. Hood Meadows","Mt. Hood Skibowl"],
+  watch:"Natural-snow dependence matters; low-snow years can delay openings and shorten the season."
+},
+leavenworth:{
+  stay:"Downtown Leavenworth is the walkable beer-hall base. Icicle Road and Lake Wenatchee have the big-cabin inventory; Snoqualmie Pass is the ski-in alternative.",
+  bars:["München Haus","Icicle Brewing","Blewett Brewing","Doghaus Brewery","Stein"],
+  food:["Andreas Keller","Mozart's","Rhein Haus","Visconti's"],
+  do:["Ski Stevens Pass","Night ski Snoqualmie","Enchantments / Colchuck Lake","Float the Yakima","Leavenworth beer-hall night","Snoqualmie Falls","Rattlesnake Ledge / Mount Si","Icicle Canyon climbing"],
+  fish:["Upper Yakima River","Wenatchee River","Icicle Creek","Middle Fork Snoqualmie"],
+  ski:["Stevens Pass","Mission Ridge","The Summit at Snoqualmie"],
+  watch:"Oktoberfest and Christmastown weekends are packed and expensive; US-2 and I-90 can close for hours in storms."
+},
+asheville:{
+  stay:"Downtown / South Slope is the walkable brewery base. Black Mountain and Brevard are the cabin-and-trout alternatives.",
+  bars:["Burial Beer Co.","Wicked Weed Brewpub","Highland Brewing","Green Man Brewery","Sierra Nevada Mills River"],
+  food:["Cúrate","Chai Pani","Burial Forestry Camp","Wicked Weed Brewpub"],
+  do:["Blue Ridge Parkway to Mount Mitchell","South Slope brewery crawl","Sierra Nevada Mills River","Looking Glass Rock & Falls","Delayed Harvest fly fishing","Graveyard Fields","French Broad float","Bent Creek / Pisgah MTB"],
+  fish:["Davidson River","Tuckasegee Delayed Harvest","Nantahala Delayed Harvest","South Mills River"],
+  ski:["Cataloochee Ski Area","Sugar Mountain","Beech Mountain Resort"],
+  watch:"This is a beer / food / fishing trip first. Natural snow is unreliable and the meaningful ski hills are small and far from Asheville."
+},
+smokies:{
+  stay:"Gatlinburg is the walkable strip; Townsend is the quieter cabin base; Cherokee is the trout-water alternative.",
+  bars:["Gatlinburg Brewing Company","Smoky Mountain Brewery","Sugarlands Distilling Co.","Ole Smoky"],
+  food:["The Peddler Steakhouse","The Greenbrier Restaurant","Howard's Restaurant"],
+  do:["Kuwohi tower & Newfound Gap","Alum Cave Trail to Mount Le Conte","Cades Cove","Guided fly fishing","Moonshine tasting crawl","Waterfall hikes","Oconaluftee elk","Little River tubing"],
+  fish:["Little River","Abrams Creek","Oconaluftee River","Cherokee Enterprise Waters"],
+  ski:["Ober Gatlinburg","Cataloochee Ski Area"],
+  watch:"October and holiday traffic can be brutal; the strip is touristy rather than a true ski-town nightlife scene."
+},
+stowe:{
+  stay:"Stowe village is picturesque and walkable in the center, but Mountain Road lodging spreads out. Waterbury is cheaper; Burlington adds a college-city night out.",
+  bars:["The Alchemist Stowe","von Trapp Brewing & Bierhall","The Matterhorn","Doc Ponds","Prohibition Pig (Waterbury)"],
+  food:["Plate","Piecasso","American Flatbread"],
+  do:["Ski Stowe Front Four","Mount Mansfield hike","Craft beer trail","Smugglers' Notch drive","Stowe Recreation Path","Mount Mansfield toll road / gondola","VT-100 foliage drives","Mad River Glen"],
+  fish:["Lamoille River","Little River / Winooski","Mad River","Battenkill"],
+  ski:["Stowe Mountain Resort","Sugarbush","Smugglers' Notch","Mad River Glen"],
+  watch:"Mud season can close high trails, and November stick season is a gray in-between period."
+},
+vegas:{
+  stay:"Stay on the Strip for nightlife, Summerlin / Red Rock for easier mountain access, or Mount Charleston village if you want a quiet pine-forest night.",
+  bars:["Able Baker Brewing","CraftHaus","Tenaya Creek Brewery","Big Dog's Brewing","The Tavern at The Retreat on Charleston Peak"],
+  food:["Canyon Restaurant at The Retreat on Charleston Peak"],
+  do:["Lee Canyon ski day","Charleston Peak via South Loop","Cathedral Rock Trail","Bristlecone pines","Snow play at Foxtail / Lee Meadows","Red Rock Canyon scenic drive","Lake Mead / Willow Beach fishing","Strip & Fremont nightlife"],
+  fish:["Lake Mohave / Willow Beach","Lake Mead","Cold Creek Pond","Las Vegas urban ponds"],
+  ski:["Lee Canyon"],
+  watch:"This is a Vegas trip with a mountain attached: skiing is small, trout rivers are absent, and the mountain has almost no nightlife."
+}
+};
+
+function richList(title,items){
+  return '<div class="rich-block"><h4>'+title+'</h4><div class="rich-chips">'+items.map(function(x){return '<span>'+esc(x)+'</span>'}).join("")+'</div></div>';
+}
+function persistentThreadHtml(d){
+  var n=ISSUE_BY_DEST[d.id];
+  return '<div class="shared-panel destination-thread"><div><div class="eyebrow">PERSISTENT DESTINATION THREAD</div><h4>Shared '+esc(d.name)+' comments</h4><p>Everyone can read the same thread. Open GitHub to post, edit or delete your own comments.</p></div><a class="primary shared-link" target="_blank" rel="noopener" href="https://github.com/chrisjdaniels24research-dot/Paris-guide/issues/'+n+'">Open thread ↗</a></div><div class="shared-comments" id="sharedComments-'+d.id+'"><p class="muted">Loading shared comments…</p></div>';
+}
+function loadSharedComments(d){
+  var el=qs("#sharedComments-"+d.id);if(!el)return;
+  fetch("https://api.github.com/repos/chrisjdaniels24research-dot/Paris-guide/issues/"+ISSUE_BY_DEST[d.id]+"/comments",{headers:{"Accept":"application/vnd.github+json"}})
+    .then(function(r){if(!r.ok)throw new Error("GitHub "+r.status);return r.json()})
+    .then(function(rows){
+      el.innerHTML=rows.length?rows.slice(-12).reverse().map(function(c){return '<div class="comment shared"><b>'+esc(c.user&&c.user.login||"GitHub user")+'</b><p>'+esc(String(c.body||"").slice(0,1200))+'</p><small>'+new Date(c.created_at).toLocaleString()+' · <a target="_blank" rel="noopener" href="'+c.html_url+'">open ↗</a></small></div>'}).join(""):'<p class="muted">No shared comments yet — start the thread.</p>';
+    }).catch(function(){el.innerHTML='<p class="muted">Shared comments could not load right now. The GitHub thread still works.</p>'});
+}
+
+var _richOpenDetail=window.openDetail;
+window.openDetail=function(id){
+  _richOpenDetail(id);
+  var d=DESTS.find(function(x){return x.id===id}),r=RICH[id]; if(!d||!r)return;
+  var body=qs("#detailContent .detail-body");if(!body)return;
+  var anchor=Array.from(body.querySelectorAll("h3")).find(function(h){return h.textContent==="What do you think?"});
+  var panel=document.createElement("div");panel.className="source-rich";
+  panel.innerHTML='<h3>How to do '+esc(d.name)+'</h3><p class="stay-note">'+esc(r.stay)+'</p>'+
+    richList("Bars & breweries",r.bars)+richList("Restaurants",r.food)+richList("Things to do",r.do)+richList("Fishing",r.fish)+richList("Skiing",r.ski)+
+    '<div class="watchout"><b>Watch-out</b><span>'+esc(r.watch)+'</span></div>'+persistentThreadHtml(d);
+  if(anchor)body.insertBefore(panel,anchor);else body.prepend(panel);
+  rebuildLocalComments(d);
+  rebuildHousing(d);
+  loadSharedComments(d);
+};
+
+function rebuildLocalComments(d){
+  var box=qs("#comments");if(!box)return;var comments=S.comments[d.id]||[];
+  box.innerHTML=comments.length?comments.map(function(c,i){return '<div class="comment"><b>'+esc(c.name)+'</b><p>'+esc(c.text)+'</p><small>'+new Date(c.ts).toLocaleString()+'</small>'+(c.name===S.profile?'<div class="item-actions"><button class="danger-mini" data-del-comment="'+i+'">Delete</button></div>':'')+'</div>'}).join(""):'<p class="muted">No quick comments on this device.</p>';
+  qsa("[data-del-comment]").forEach(function(b){b.onclick=function(){var i=Number(b.dataset.delComment);if(!confirm("Delete this local comment?"))return;S.comments[d.id].splice(i,1);save();window.openDetail(d.id)}});
+}
+function rebuildHousing(d){
+  var list=qs("#housingList");if(!list)return;
+  var arr=S.housing[d.id]||[];
+  if(!arr.length)return;
+  qsa("#housingList .housing-card").forEach(function(card,i){
+    if(i===0)return;
+    var idx=i-1;
+    var actions=card.querySelector(".housing-actions");
+    if(actions&&arr[idx])actions.insertAdjacentHTML("beforeend",'<button class="danger-mini" data-del-housing="'+idx+'">Delete</button>');
+  });
+  qsa("[data-del-housing]").forEach(function(b){b.onclick=function(){var i=Number(b.dataset.delHousing);if(!confirm("Remove this housing option?"))return;S.housing[d.id].splice(i,1);save();window.openDetail(d.id);renderTrip()}});
+}
+function renderBoard(){
+  var list=qs("#boardList");if(!list)return;
+  list.innerHTML=S.board.length?S.board.map(function(m,i){
+    return '<div class="board-message"><div class="face">'+initials(m.name)+'</div><div class="board-bubble"><div><b>'+esc(m.name)+'</b><time>'+new Date(m.ts).toLocaleString()+'</time></div><p>'+esc(m.text)+'</p>'+(m.name===S.profile?'<div class="item-actions"><button class="danger-mini" data-del-board="'+i+'">Delete</button></div>':'')+'</div></div>'
+  }).join(""):'<div class="board-empty">No quick notes on this device.</div>';
+  qsa("[data-del-board]").forEach(function(b){b.onclick=function(){var i=Number(b.dataset.delBoard);if(!confirm("Delete this quick note?"))return;S.board.splice(i,1);save();renderBoard()}});
+}
+function availabilityText(){
+  var a=(S.availability[S.profile]||[]).slice().sort();
+  if(!a.length)return S.profile+" has not marked any 2026 availability yet.";
+  return S.profile+" — 2026 mountain-trip availability:\n"+a.map(function(x){var d=new Date(x+"T12:00:00");var lw=longWeekendFor(x);return "• "+d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+(lw?" — "+lw.name:"")}).join("\n");
+}
+if(qs("#copyAvailability"))qs("#copyAvailability").onclick=function(){
+  var t=availabilityText();
+  navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t).then(function(){alert("Availability copied. Paste it into the shared GitHub availability thread.")}).catch(function(){prompt("Copy this availability:",t)}):prompt("Copy this availability:",t);
+};
+
+/* show shared group-chat comments inside the Group page */
+function loadSharedGroupChat(){
+  var board=qs("#boardList");if(!board||qs("#sharedGroupReadback"))return;
+  var wrap=document.createElement("div");wrap.id="sharedGroupReadback";wrap.className="shared-group-readback";wrap.innerHTML='<div class="eyebrow">LATEST SHARED CHAT</div><p class="muted">Loading from GitHub…</p>';
+  board.parentNode.insertBefore(wrap,board);
+  fetch("https://api.github.com/repos/chrisjdaniels24research-dot/Paris-guide/issues/2/comments",{headers:{"Accept":"application/vnd.github+json"}})
+   .then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(rows){
+     wrap.innerHTML='<div class="eyebrow">LATEST SHARED CHAT</div>'+(rows.length?rows.slice(-10).reverse().map(function(c){return '<div class="comment shared"><b>'+esc(c.user&&c.user.login||"GitHub user")+'</b><p>'+esc(String(c.body||"").slice(0,800))+'</p><small><a target="_blank" href="'+c.html_url+'">open / edit / delete ↗</a></small></div>'}).join(""):'<p class="muted">No shared messages yet.</p>');
+   }).catch(function(){wrap.innerHTML='<div class="eyebrow">LATEST SHARED CHAT</div><p class="muted">Could not load GitHub comments. Use Open shared chat above.</p>'});
+}
+var _releaseRenderGroup=renderGroup;
+renderGroup=function(){_releaseRenderGroup();loadSharedGroupChat();};
