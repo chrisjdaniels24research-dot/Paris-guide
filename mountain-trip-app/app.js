@@ -508,3 +508,43 @@ if(groupPanel&&!qs("#refreshSharedChat")){
 /* Explicitly label browser-only notes so nobody mistakes them for shared state. */
 var localHead=Array.from(document.querySelectorAll(".detail-body h3")).find(function(h){return h.textContent==="Comments"});
 if(localHead)localHead.textContent="Quick notes on this device";
+
+
+/* ---- final link/readback polish ---- */
+richList=function(title,items){
+  return '<div class="rich-block"><h4>'+title+'</h4><div class="rich-chips">'+items.map(function(x){
+    var mapLike=/Bars|Restaurants/i.test(title);
+    var href=mapLike?gm(x):gs(x+" official");
+    return '<a target="_blank" rel="noopener" href="'+href+'">'+esc(x)+' ↗</a>';
+  }).join("")+'</div></div>';
+}
+function appleMaps(q){return "https://maps.apple.com/?q="+encodeURIComponent(q)}
+var _linkPolishOpen=window.openDetail;
+window.openDetail=function(id){
+  _linkPolishOpen(id);
+  var d=DESTS.find(function(x){return x.id===id});if(!d)return;
+  var body=qs("#detailContent .detail-body");
+  if(body&&!qs("#iosLinks-"+id)){
+    var links=document.createElement("div");links.id="iosLinks-"+id;links.className="ios-quick-links";
+    links.innerHTML='<a class="pill" target="_blank" rel="noopener" href="'+appleMaps(d.name+" "+d.state)+'"> Apple Maps</a>'+
+      '<a class="pill" target="_blank" rel="noopener" href="'+gs("Vrbo "+d.name+" "+d.state)+'">Vrbo ↗</a>'+
+      '<a class="pill" target="_blank" rel="noopener" href="'+gs("hotels "+d.name+" "+d.state)+'">Hotels ↗</a>'+
+      '<a class="pill" target="_blank" rel="noopener" href="'+gs(d.name+" "+d.state+" events 2026")+'">Events ↗</a>';
+    var stats=body.querySelector(".stats");if(stats)stats.insertAdjacentElement("afterend",links);else body.prepend(links);
+  }
+  var h=Array.from(body?body.querySelectorAll("h3"):[]).find(function(x){return x.textContent==="Comments"});
+  if(h)h.textContent="Quick notes on this device";
+};
+
+function loadSharedAvailability(){
+  var host=qs("#longWeekendList");if(!host||qs("#sharedAvailabilityReadback"))return;
+  var el=document.createElement("div");el.id="sharedAvailabilityReadback";el.className="shared-availability-readback";
+  el.innerHTML='<div class="eyebrow">SHARED AVAILABILITY POSTS</div><p class="muted">Loading from GitHub…</p>';
+  host.parentNode.insertBefore(el,host);
+  fetch("https://api.github.com/repos/chrisjdaniels24research-dot/Paris-guide/issues/3/comments",{headers:{"Accept":"application/vnd.github+json"}})
+   .then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(rows){
+     el.innerHTML='<div class="eyebrow">SHARED AVAILABILITY POSTS</div>'+(rows.length?rows.slice(-8).reverse().map(function(c){return '<div class="comment shared"><b>'+esc(c.user&&c.user.login||"GitHub user")+'</b><p>'+esc(String(c.body||"").slice(0,1200))+'</p><small><a target="_blank" rel="noopener" href="'+c.html_url+'">open / edit / delete ↗</a></small></div>'}).join(""):'<p class="muted">No shared availability posts yet.</p>');
+   }).catch(function(){el.innerHTML='<div class="eyebrow">SHARED AVAILABILITY POSTS</div><p class="muted">Could not load posts. Use “Open shared availability” above.</p>'});
+}
+var _availabilityRenderGroup=renderGroup;
+renderGroup=function(){_availabilityRenderGroup();loadSharedAvailability();};
