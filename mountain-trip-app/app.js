@@ -556,3 +556,23 @@ if(qs("#shareApp"))qs("#shareApp").onclick=function(){
   else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert("App link copied.")})}
   else prompt("Copy this link:",url);
 };
+
+
+/* ---- empty-state polish ---- */
+var _emptyStateRenderGroup=renderGroup;
+renderGroup=function(){
+  _emptyStateRenderGroup();
+  var positive=DESTS.reduce(function(n,d){return n+likes(d)},0);
+  if(!positive){
+    var first=qs("#awards .award-card");
+    if(first&&/Group favorite/.test(first.textContent)){
+      first.querySelector("h4").textContent="Group voting not started";
+      var p=first.querySelector("p");if(p)p.textContent="Nobody has cast a positive destination vote yet.";
+    }
+    var summary=qs("#groupSummary");
+    if(summary&&!qs("#voteEmptyNote")){
+      summary.insertAdjacentHTML("afterbegin",'<div id="voteEmptyNote" class="empty-note">No destination votes yet. Rankings will become meaningful as the group votes.</div>');
+    }
+  }
+};
+renderGroup();
