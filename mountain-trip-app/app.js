@@ -548,3 +548,11 @@ function loadSharedAvailability(){
 }
 var _availabilityRenderGroup=renderGroup;
 renderGroup=function(){_availabilityRenderGroup();loadSharedAvailability();};
+
+/* ---- share control ---- */
+if(qs("#shareApp"))qs("#shareApp").onclick=function(){
+  var url=location.href.split("#")[0],data={title:"Mountain Trip",text:"Help us pick the mountain trip — vote, check dates, compare chalets and drop comments.",url:url};
+  if(navigator.share){navigator.share(data).catch(function(){})}
+  else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert("App link copied.")})}
+  else prompt("Copy this link:",url);
+};
