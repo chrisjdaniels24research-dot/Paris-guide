@@ -103,9 +103,18 @@
           </div>
         </div>
         <div class="comment-board">
+          <div class="shared-panel">
+            <div>
+              <div class="eyebrow">PERSISTENT SHARED CHAT</div>
+              <h4>Everyone sees the same thread</h4>
+              <p>Use the GitHub thread for anything the whole group needs to keep. GitHub handles durable comments, edits and deletes.</p>
+            </div>
+            <a class="primary shared-link" target="_blank" rel="noopener" href="https://github.com/chrisjdaniels24research-dot/Paris-guide/issues/2">Open shared chat ↗</a>
+          </div>
           <div class="board-compose">
-            <textarea id="boardInput" rows="3" placeholder="Drop a thought for everyone — dates, a chalet, a destination, whatever..."></textarea>
-            <button class="primary" id="postBoard">Post to board</button>
+            <div class="eyebrow">QUICK NOTES ON THIS DEVICE</div>
+            <textarea id="boardInput" rows="3" placeholder="Quick scratch note — for shared/persistent discussion use the button above."></textarea>
+            <button class="secondary" id="postBoard">Save quick note</button>
           </div>
           <div id="boardList" class="board-list"></div>
         </div>
@@ -125,11 +134,15 @@
             </div>
             <button class="secondary" id="nextMonth">→</button>
           </div>
-          <p class="muted calendar-help">Tap the dates you’re available. Gold dates mark extended U.S. holiday weekends in 2026.</p>
+          <p class="muted calendar-help">Tap the dates you’re available. Gold dates mark extended U.S. holiday weekends in 2026. Your taps stay on this device; use “Share availability” below to post the summary to the persistent group thread.</p>
           <div id="calendarGrid" class="calendar-grid"></div>
           <div class="calendar-legend">
             <span><i class="legend-dot mine"></i> Your availability</span>
             <span><i class="legend-dot long"></i> Extended weekend</span>
+          </div>
+          <div class="calendar-share-actions">
+            <button class="primary" id="copyAvailability">Copy my availability</button>
+            <a class="secondary shared-link" target="_blank" rel="noopener" href="https://github.com/chrisjdaniels24research-dot/Paris-guide/issues/3">Open shared availability ↗</a>
           </div>
           <div id="longWeekendList" class="long-weekends"></div>
         </div>
